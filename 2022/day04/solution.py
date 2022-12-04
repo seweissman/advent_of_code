@@ -59,7 +59,7 @@ So, in this example, the number of overlapping assignment pairs is 4.
 """
 
 from collections import namedtuple
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 
 Range = namedtuple("Range", ["low", "high"])
 
