@@ -75,30 +75,25 @@ def convert_to_range(range_str: str) -> Range:
     return Range(int(range_low), int(range_high))
 
 
-def partially_overlap(range1: Range, range2: Range) -> bool:
-    if range1.high < range2.low or range2.high < range1.low:
-        return False
-    return True
+def measure_overlap(range1: Range, range2: Range) -> int:
+    return min(range1.high, range2.high) - max(range1.low, range2.low) + 1
 
 
-def completely_overlap(range1: Range, range2: Range) -> bool:
-    if range1.low >= range2.low and range1.high <= range2.high:
-        return True
-    if range2.low >= range1.low and range2.high <= range1.high:
-        return True
-    return False
-
-
-def count_overlaps(input_text: str, overlap_fn: Callable[[Range, Range], bool]) -> int:
+def count_overlaps(input_text: str) -> Tuple[int, int]:
     lines = parse_input(input_text)
-    overlap_count = 0
+    full_overlap_count = 0
+    partial_overlap_count = 0
     for line in lines:
         range1_str, range2_str = line.split(",")
         range1 = convert_to_range(range1_str)
         range2 = convert_to_range(range2_str)
-        if overlap_fn(range1, range2):
-            overlap_count += 1
-    return overlap_count
+        overlap_size = measure_overlap(range1, range2)
+        if overlap_size > 0:
+            partial_overlap_count += 1
+            # if the size of the overlap is equal to the size of the smaller of the ranges it's a full overlap
+            if overlap_size == min(range1.high - range1.low + 1, range2.high - range2.low + 1):
+                full_overlap_count += 1
+    return full_overlap_count, partial_overlap_count
 
 
 SAMPLE_INPUT = """2-4,6-8
@@ -109,19 +104,16 @@ SAMPLE_INPUT = """2-4,6-8
 2-6,4-8"""
 
 
-def test_sample_input_part1():
-    assert count_overlaps(SAMPLE_INPUT, overlap_fn=completely_overlap) == 2
-
-
-def test_sample_input_part2():
-    assert count_overlaps(SAMPLE_INPUT, overlap_fn=partially_overlap) == 4
+def test_sample_input():
+    assert count_overlaps(SAMPLE_INPUT) == (2, 4)
 
 if __name__ == "__main__":
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
 
+    full_ct, partial_ct = count_overlaps(input_text)
     # part 1
-    print("Part1: ", count_overlaps(input_text, overlap_fn=completely_overlap))
+    print("Part1: ", full_ct)
 
     # part 2
-    print("Part2: ", count_overlaps(input_text, overlap_fn=partially_overlap))
+    print("Part2: ", partial_ct)
