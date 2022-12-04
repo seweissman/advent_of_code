@@ -21,9 +21,11 @@ This example list uses single-digit section IDs to make it easier to draw; your 
 
 .234.....  2-4
 .....678.  6-8
+min(8,4) - max(6,2) + 1 = 4 - 6 + 1 = -1
 
 .23......  2-3
 ...45....  4-5
+min(5,3) - max(4,2) + 1 = 3 - 4 + 1 = 0
 
 ....567..  5-7
 ......789  7-9
@@ -31,8 +33,11 @@ This example list uses single-digit section IDs to make it easier to draw; your 
 .2345678.  2-8
 ..34567..  3-7
 
+min(8,7) - max(3,2) + 1 = 7-3+1 = 5
+
 .....6...  6-6
 ...456...  4-6
+min(6,6) - max(6,4) + 1 = 6 - 6 + 1 = 1
 
 .23456...  2-6
 ...45678.  4-8
@@ -54,7 +59,7 @@ So, in this example, the number of overlapping assignment pairs is 4.
 """
 
 from collections import namedtuple
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 Range = namedtuple("Range", ["low", "high"])
 
@@ -70,6 +75,12 @@ def convert_to_range(range_str: str) -> Range:
     return Range(int(range_low), int(range_high))
 
 
+def partially_overlap(range1: Range, range2: Range) -> bool:
+    if range1.high < range2.low or range2.high < range1.low:
+        return False
+    return True
+
+
 def completely_overlap(range1: Range, range2: Range) -> bool:
     if range1.low >= range2.low and range1.high <= range2.high:
         return True
@@ -78,16 +89,16 @@ def completely_overlap(range1: Range, range2: Range) -> bool:
     return False
 
 
-def count_full_overlaps(input_text: str) -> int:
+def count_overlaps(input_text: str, overlap_fn: Callable[[Range, Range], bool]) -> int:
     lines = parse_input(input_text)
-    full_overlap_count = 0
+    overlap_count = 0
     for line in lines:
         range1_str, range2_str = line.split(",")
         range1 = convert_to_range(range1_str)
         range2 = convert_to_range(range2_str)
-        if completely_overlap(range1, range2):
-            full_overlap_count += 1
-    return full_overlap_count
+        if overlap_fn(range1, range2):
+            overlap_count += 1
+    return overlap_count
 
 
 SAMPLE_INPUT = """2-4,6-8
@@ -99,12 +110,18 @@ SAMPLE_INPUT = """2-4,6-8
 
 
 def test_sample_input_part1():
-    assert count_full_overlaps(SAMPLE_INPUT) == 2
+    assert count_overlaps(SAMPLE_INPUT, overlap_fn=completely_overlap) == 2
 
+
+def test_sample_input_part2():
+    assert count_overlaps(SAMPLE_INPUT, overlap_fn=partially_overlap) == 4
 
 if __name__ == "__main__":
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
 
     # part 1
-    print("Part1: ", count_full_overlaps(input_text))
+    print("Part1: ", count_overlaps(input_text, overlap_fn=completely_overlap))
+
+    # part 2
+    print("Part2: ", count_overlaps(input_text, overlap_fn=partially_overlap))
