@@ -122,7 +122,7 @@ class Stacks:
             self.stacks.append(stack_que)
 
     def move_crates(self, n: int, start_row: int, finish_row: int) -> None:
-        for i in range(n):
+        for _ in range(n):
             crate = self.stacks[start_row - 1].pop()
             self.stacks[finish_row - 1].append(crate)
 
@@ -139,6 +139,16 @@ class Stacks:
             self.move_crates(*move)
 
 
+class Stacks9001(Stacks):
+    def move_crates(self, n: int, start_row: int, finish_row: int) -> None:
+        append_crates = []
+        for _ in range(n):
+            crate = self.stacks[start_row - 1].pop()
+            append_crates.append(crate)
+        for crate in reversed(append_crates):
+            self.stacks[finish_row - 1].append(crate)
+
+
 def test_stacks():
     stacks = Stacks(SAMPLE_START)
     assert stacks.peek() == ["N", "D", "P"]
@@ -146,7 +156,7 @@ def test_stacks():
     assert stacks.pop(1) == "Z"
 
 
-def test_moves():
+def test_moves_part1():
     stacks = Stacks(SAMPLE_START)
     # move 1 from 2 to 1
     stacks.move_crates(1, 2, 1)
@@ -165,20 +175,39 @@ def test_moves():
     assert stacks.peek() == ["C", "M", "Z"]
 
 
-def test_re():
-    m = re.match(r"move (\d+) from (\d+) to (\d+)", "move 1 from 2 to 1")
-    assert m is not None
-    assert m.group(1) == "1"
-    assert m.group(2) == "2"
-    assert m.group(3) == "1"
+def test_moves_part2():
+    stacks = Stacks9001(SAMPLE_START)
+    # move 1 from 2 to 1
+    stacks.move_crates(1, 2, 1)
+    assert stacks.peek() == ["D", "C", "P"]
+
+    # move 3 from 1 to 3
+    stacks.move_crates(3, 1, 3)
+    assert stacks.peek() == ["", "C", "D"]
+
+    # move 2 from 2 to 1
+    stacks.move_crates(2, 2, 1)
+    assert stacks.peek() == ["C", "", "D"]
+
+    # move 1 from 1 to 2
+    stacks.move_crates(1, 1, 2)
+    assert stacks.peek() == ["M", "C", "D"]
 
 
-def test_run_moves():
+def test_run_moves_part1():
     stacks = Stacks(SAMPLE_START)
     moves = parse_input(SAMPLE_INPUT)
     stacks.run_moves(moves)
     final_state = stacks.peek()
     assert final_state == ["C", "M", "Z"]
+
+
+def test_run_moves_part2():
+    stacks = Stacks9001(SAMPLE_START)
+    moves = parse_input(SAMPLE_INPUT)
+    stacks.run_moves(moves)
+    final_state = stacks.peek()
+    assert final_state == ["M", "C", "D"]
 
 
 PUZZLE_START = ["ZJG", "QLRPWFVC", "FPMCLGR", "LFBWPHM", "GCFSVQ", "WHJZMQTL", "HFSBV", "FJZS", "MCDPFHBT"]
@@ -202,6 +231,10 @@ def parse_move(move_txt: str) -> Tuple[int, int, int]:
     return int(m.group(1)), int(m.group(2)), int(m.group(3))
 
 
+def test_parse_move():
+    move = parse_move("move 1 from 2 to 1")
+    assert move == (1, 2, 1)
+
 def parse_input(text: str) -> List[Tuple[int, int, int]]:
     """Parse lines of input from raw text"""
     lines = [line.strip() for line in text.split("\n") if line.strip()]
@@ -216,3 +249,7 @@ if __name__ == "__main__":
     stacks = Stacks(PUZZLE_START)
     stacks.run_moves(moves)
     print("Part 1", "".join(stacks.peek()))
+
+    stacks = Stacks9001(PUZZLE_START)
+    stacks.run_moves(moves)
+    print("Part 2", "".join(stacks.peek()))
