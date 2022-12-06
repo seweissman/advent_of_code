@@ -235,6 +235,7 @@ def test_parse_move():
     move = parse_move("move 1 from 2 to 1")
     assert move == (1, 2, 1)
 
+
 def parse_input(text: str) -> List[Tuple[int, int, int]]:
     """Parse lines of input from raw text"""
     lines = [line.strip() for line in text.split("\n") if line.strip()]
