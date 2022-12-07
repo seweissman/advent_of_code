@@ -110,11 +110,9 @@ class File:
 
 
 class Directory(File):
-    def __init__(self, name: str, parent: Union["Directory", None] = None):
+    def __init__(self, name: str):
         super().__init__(name)
         self.contents: List[File] = []
-        self.parent: Union[Directory, None] = parent
-
 
 def parse_input(text: str) -> List[str]:
     """Parse lines of input from raw text"""
@@ -122,24 +120,29 @@ def parse_input(text: str) -> List[str]:
     return lines
 
 
+def get_path(path_list):
+    return "/" + "/".join(path_list)
+
+
 def execute_lines(lines: List[str], dirmap: Dict[str, Directory]) -> None:
     curr_dir = dirmap["/"]
+    curr_path = []
     curr_line = 0
     while curr_line < len(lines):
         line = lines[curr_line]
-        print(line)
         if line.startswith("$ "):
             cmd = line[2:4]
             if cmd == "cd":
                 dest = line[5:]
-                if dest == "..":
-                    parent_dir = curr_dir.parent
-                    if parent_dir:
-                        curr_dir = dirmap[parent_dir.name]
-                    else:
-                        raise Exception("can't cd to parent of root directory")
+                if dest == "/":
+                    curr_path = []
+                    curr_dir = dirmap[get_path(curr_path)]
+                elif dest == "..":
+                    curr_path.pop()
+                    curr_dir = dirmap[get_path(curr_path)]
                 else:
-                    curr_dir = dirmap[dest]
+                    curr_path.append(dest)
+                    curr_dir = dirmap[get_path(curr_path)]
                 curr_line += 1
             elif cmd == "ls":
                 curr_line += 1
@@ -147,10 +150,11 @@ def execute_lines(lines: List[str], dirmap: Dict[str, Directory]) -> None:
                     ls_line = lines[curr_line]
                     size_str, name = ls_line.split(" ")
                     if size_str == "dir":
-                        if name not in dirmap:
-                            new_dir = Directory(name, parent=curr_dir)
+                        sub_path_str = get_path(curr_path + [name])
+                        if sub_path_str not in dirmap:
+                            new_dir = Directory(name)
                             curr_dir.contents.append(new_dir)
-                            dirmap[name] = new_dir
+                            dirmap[sub_path_str] = new_dir
                     else:
                         size = int(size_str)
                         new_file = File(name, size=size)
@@ -171,11 +175,11 @@ def test_sample():
     assert sizemap["/"] == 48381165
 
 
-def calculate_sizes(dirmap, sizemap, curr_file: File):
+def calculate_sizes(sizemap, curr_file: File, path=""):
     if not isinstance(curr_file, Directory):
         return curr_file.size
-    dir_sum = sum([calculate_sizes(dirmap, sizemap, file) for file in curr_file.contents])
-    sizemap[curr_file.name] = dir_sum
+    dir_sum = sum([calculate_sizes(sizemap, file, path + "/" + curr_file.name) for file in curr_file.contents])
+    sizemap[path + "/" + curr_file.name] = dir_sum
     return dir_sum
 
 
@@ -188,7 +192,7 @@ if __name__ == "__main__":
     dirmap = {"/": root}
     execute_lines(lines, dirmap)
     sizemap = {}
-    calculate_sizes(dirmap, sizemap, root)
+    calculate_sizes(sizemap, root)
     print(sizemap)
     part1sum = sum([size for size in sizemap.values() if size <= 100000])
     print("Part 1: ", part1sum)
