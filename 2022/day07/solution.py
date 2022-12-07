@@ -73,6 +73,23 @@ As the outermost directory, / contains every file. Its total size is 48381165, t
 To begin, find all of the directories with a total size of at most 100000, then calculate the sum of their total sizes. In the example above, these directories are a and e; the sum of their total sizes is 95437 (94853 + 584). (As in this example, this process can count files more than once!)
 
 Find all of the directories with a total size of at most 100000. What is the sum of the total sizes of those directories?
+
+--- Part Two ---
+Now, you're ready to choose a directory to delete.
+
+The total disk space available to the filesystem is 70000000. To run the update, you need unused space of at least 30000000. You need to find a directory you can delete that will free up enough space to run the update.
+
+In the example above, the total size of the outermost directory (and thus the total amount of used space) is 48381165; this means that the size of the unused space must currently be 21618835, which isn't quite the 30000000 required by the update. Therefore, the update still requires a directory with total size of at least 8381165 to be deleted before it can run.
+
+To achieve this, you have the following options:
+
+Delete directory e, which would increase unused space by 584.
+Delete directory a, which would increase unused space by 94853.
+Delete directory d, which would increase unused space by 24933642.
+Delete directory /, which would increase unused space by 48381165.
+Directories e and a are both too small; deleting them would not free up enough space. However, directories d and / are both big enough! Between these, choose the smallest: d, increasing unused space by 24933642.
+
+Find the smallest directory that, if deleted, would free up enough space on the filesystem to run the update. What is the total size of that directory?
 """
 
 from typing import Dict, List, Union
@@ -104,9 +121,19 @@ $ ls
 
 
 class File:
-    def __init__(self, name: str, size: int = 0):
+    def __init__(self, name: str, size: int = 0, parent: Union["File", None] = None):
         self.name: str = name
         self.size: int = size
+        self.parent = parent
+
+    def path(self):
+        if self.parent is None:
+            return self.name
+        parent_path = self.parent.path()
+        # Some annoying logic here to handle the root
+        if parent_path == "/":
+            return "/" + self.name
+        return self.parent.path() + "/" + self.name
 
 
 class Directory(File):
@@ -168,31 +195,49 @@ def test_sample():
     dirmap = {"/": root}
     execute_lines(lines, dirmap)
     sizemap = {}
-    calculate_sizes(dirmap, sizemap, root)
-    assert sizemap["e"] == 584
-    assert sizemap["a"] == 94853
-    assert sizemap["d"] == 24933642
+    calculate_sizes(sizemap, root)
+    print(sizemap)
+    assert sizemap["/a/e"] == 584
+    assert sizemap["/a"] == 94853
+    assert sizemap["/d"] == 24933642
     assert sizemap["/"] == 48381165
 
 
 def calculate_sizes(sizemap, curr_file: File, path=""):
     if not isinstance(curr_file, Directory):
         return curr_file.size
-    dir_sum = sum([calculate_sizes(sizemap, file, path + "/" + curr_file.name) for file in curr_file.contents])
-    sizemap[path + "/" + curr_file.name] = dir_sum
+    if path == "":
+        start_path = ""
+    elif path == "/":
+        start_path = "/"
+    else:
+        start_path = path + "/"
+    dir_sum = sum([calculate_sizes(sizemap, file, start_path + curr_file.name) for file in curr_file.contents])
+    sizemap[start_path + curr_file.name] = dir_sum
     return dir_sum
 
 
 if __name__ == "__main__":
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
-
     lines = parse_input(input_text)
     root = Directory("/")
     dirmap = {"/": root}
     execute_lines(lines, dirmap)
     sizemap = {}
     calculate_sizes(sizemap, root)
-    print(sizemap)
     part1sum = sum([size for size in sizemap.values() if size <= 100000])
+
     print("Part 1: ", part1sum)
+    full_size = 70000000
+    needed_size = 30000000
+    free_size = full_size - sizemap["/"]
+    size_to_free = needed_size - free_size
+    print("Free size", free_size)
+    print("Size to free", size_to_free)
+    min_to_free = sizemap["/"]
+    for size in sizemap.values():
+        if size < min_to_free and size >= size_to_free:
+            min_to_free = size
+    print("Part2: ", min_to_free)
+    print(list(sizemap.values()))
