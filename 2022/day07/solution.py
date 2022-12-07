@@ -149,7 +149,7 @@ class FileSystem:
         self.directory_map[self.root.path()] = self.root
         self.cwd: Directory = self.root
 
-    def cd(self, dest: str):
+    def cd(self, dest: str) -> None:
         """Change directory to an absolute or relative path"""
         if dest.startswith("/"):
             self.cwd = self.directory_map[dest]
@@ -161,13 +161,13 @@ class FileSystem:
         else:
             self.cwd = self.directory_map[self.cwd.path() + dest + "/"]
 
-    def mkdir(self, name: str):
+    def mkdir(self, name: str) -> None:
         """Make a directory of the cwd with the given name"""
         dir = Directory(name, parent=self.cwd)
         self.cwd.contents.append(dir)
         self.directory_map[dir.path()] = dir
 
-    def mkfile(self, name: str, size: int):
+    def mkfile(self, name: str, size: int) -> None:
         """Make a file in the cwd with the given name and size"""
         new_file = File(name, size=size, parent=self.cwd)
         self.cwd.contents.append(new_file)
@@ -223,7 +223,7 @@ def test_sample():
     assert sizemap["/"] == 48381165
 
 
-if __name__ == "__main__":
+def main():
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
     lines = parse_input(input_text)
@@ -243,3 +243,7 @@ if __name__ == "__main__":
         if size < min_to_free and size >= size_to_free:
             min_to_free = size
     print("Part2: ", min_to_free)
+
+
+if __name__ == "__main__":
+    main()
