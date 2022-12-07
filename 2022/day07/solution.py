@@ -126,7 +126,7 @@ class File:
         self.size: int = size
         self.parent: Union["Directory", None] = parent
 
-    def path(self):
+    def path(self) -> str:
         if self.parent is None:
             return self.name
         return self.parent.path() + self.name
@@ -137,19 +137,43 @@ class Directory(File):
         super().__init__(name, parent=parent)
         self.contents: List[File] = []
 
-    def path(self):
+    def path(self) -> str:
         file_path = super().path()
         return file_path + "/"
 
 
-def parse_input(text: str) -> List[str]:
-    """Parse lines of input from raw text"""
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
-    return lines
+class FileSystem:
+    def __init__(self):
+        self.directory_map: Dict[str, Directory] = {}
+        self.root: Directory = Directory("")
+        self.directory_map[self.root.path()] = self.root
+        self.cwd: Directory = self.root
+
+    def cd(self, dest: str):
+        """Change directory to an absolute or relative path"""
+        if dest.startswith("/"):
+            self.cwd = self.directory_map[dest]
+        elif dest == "..":
+            if self.cwd.parent is None:
+                self.cwd = self.root
+            else:
+                self.cwd = self.cwd.parent
+        else:
+            self.cwd = self.directory_map[self.cwd.path() + dest + "/"]
+
+    def mkdir(self, name: str):
+        """Make a directory of the cwd with the given name"""
+        dir = Directory(name, parent=self.cwd)
+        self.cwd.contents.append(dir)
+        self.directory_map[dir.path()] = dir
+
+    def mkfile(self, name: str, size: int):
+        """Make a file in the cwd with the given name and size"""
+        new_file = File(name, size=size, parent=self.cwd)
+        self.cwd.contents.append(new_file)
 
 
-def execute_lines(lines: List[str], dirmap: Dict[str, Directory]) -> None:
-    curr_dir = dirmap["/"]
+def execute_lines(lines: List[str], fs: FileSystem) -> None:
     curr_line = 0
     while curr_line < len(lines):
         line = lines[curr_line]
@@ -157,14 +181,7 @@ def execute_lines(lines: List[str], dirmap: Dict[str, Directory]) -> None:
             cmd = line[2:4]
             if cmd == "cd":
                 dest = line[5:]
-                if dest == "/":
-                    curr_dir = dirmap["/"]
-                elif dest == "..":
-                    if curr_dir.parent is None:
-                        raise Exception("Trying to go above root")
-                    curr_dir = curr_dir.parent
-                else:
-                    curr_dir = dirmap[curr_dir.path() + dest + "/"]
+                fs.cd(dest)
                 curr_line += 1
             elif cmd == "ls":
                 curr_line += 1
@@ -172,28 +189,17 @@ def execute_lines(lines: List[str], dirmap: Dict[str, Directory]) -> None:
                     ls_line = lines[curr_line]
                     size_str, name = ls_line.split(" ")
                     if size_str == "dir":
-                        new_dir = Directory(name, parent=curr_dir)
-                        curr_dir.contents.append(new_dir)
-                        dirmap[new_dir.path()] = new_dir
+                        fs.mkdir(name)
                     else:
                         size = int(size_str)
-                        new_file = File(name, size=size, parent=curr_dir)
-                        curr_dir.contents.append(new_file)
+                        fs.mkfile(name, size)
                     curr_line += 1
 
 
-def test_sample():
-    lines = parse_input(SAMPLE_INPUT)
-    root = Directory("")
-    dirmap = {root.path(): root}
-    execute_lines(lines, dirmap)
-    sizemap = {}
-    calculate_sizes(sizemap, root)
-    print(sizemap)
-    assert sizemap["/a/e/"] == 584
-    assert sizemap["/a/"] == 94853
-    assert sizemap["/d/"] == 24933642
-    assert sizemap["/"] == 48381165
+def parse_input(text: str) -> List[str]:
+    """Parse lines of input from raw text"""
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+    return lines
 
 
 def calculate_sizes(sizemap, curr_file: File):
@@ -204,23 +210,34 @@ def calculate_sizes(sizemap, curr_file: File):
     return dir_sum
 
 
+def test_sample():
+    lines = parse_input(SAMPLE_INPUT)
+    fs = FileSystem()
+    execute_lines(lines, fs)
+    sizemap = {}
+    calculate_sizes(sizemap, fs.root)
+    print(sizemap)
+    assert sizemap["/a/e/"] == 584
+    assert sizemap["/a/"] == 94853
+    assert sizemap["/d/"] == 24933642
+    assert sizemap["/"] == 48381165
+
+
 if __name__ == "__main__":
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
     lines = parse_input(input_text)
-    root = Directory("")
-    dirmap = {root.path(): root}
-    execute_lines(lines, dirmap)
+    fs = FileSystem()
+    execute_lines(lines, fs)
     sizemap = {}
-    calculate_sizes(sizemap, root)
+    calculate_sizes(sizemap, fs.root)
     part1sum = sum([size for size in sizemap.values() if size <= 100000])
     print("Part 1: ", part1sum)
     full_size = 70000000
     needed_size = 30000000
     free_size = full_size - sizemap["/"]
     size_to_free = needed_size - free_size
-    print("Free size", free_size)
-    print("Size to free", size_to_free)
+
     min_to_free = sizemap["/"]
     for size in sizemap.values():
         if size < min_to_free and size >= size_to_free:
