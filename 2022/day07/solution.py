@@ -162,7 +162,7 @@ class FileSystem:
             self.cwd = self.directory_map[self.cwd.path() + dest + "/"]
 
     def mkdir(self, name: str) -> None:
-        """Make a directory of the cwd with the given name"""
+        """Make a directory in the cwd with the given name"""
         dir = Directory(name, parent=self.cwd)
         self.cwd.contents.append(dir)
         self.directory_map[dir.path()] = dir
