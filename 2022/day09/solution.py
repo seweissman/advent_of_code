@@ -722,20 +722,20 @@ class Rope:
         for pos in range(len(self.knots) - 1):
             leader = self.knots[pos]
             follower = self.knots[pos + 1]
-            xdiff = leader.x - follower.x
-            ydiff = leader.y - follower.y
-            if ydiff == 0:
-                if abs(xdiff) > 1:
+            dx = leader.x - follower.x
+            dy = leader.y - follower.y
+            if dy == 0:
+                if abs(dx) > 1:
                     # move one space toward leader in x dir
-                    follower.x += abs(xdiff) // xdiff
-            elif xdiff == 0:
-                if abs(ydiff) > 1:
+                    follower.x += abs(dx) // dx
+            elif dx == 0:
+                if abs(dy) > 1:
                     # move one space toward leader in y dir
-                    follower.y += abs(ydiff) // ydiff
-            elif abs(xdiff) > 1 or abs(ydiff) > 1:
+                    follower.y += abs(dy) // dy
+            elif abs(dx) > 1 or abs(dy) > 1:
                 # Move one space diagonally toward leader
-                follower.x += abs(xdiff) // xdiff
-                follower.y += abs(ydiff) // ydiff
+                follower.x += abs(dx) // dx
+                follower.y += abs(dy) // dy
         self.seen_tail_positions.add(self.tail.to_tuple())
 
     def move_up(self):
