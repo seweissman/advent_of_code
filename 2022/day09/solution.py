@@ -705,6 +705,14 @@ class Position:
     def to_tuple(self):
         return (self.x, self.y)
 
+    def __hash__(self):
+        return hash(f"{self.x,self.y}")
+
+    def __eq__(self, __o: object) -> bool:
+        if isinstance(__o, Position):
+            return self.x == __o.x and self.y == __o.y
+        return False
+
 
 class Rope:
     def __init__(self, n_knots: int):
@@ -713,7 +721,7 @@ class Rope:
             self.knots.append(Position(0, 0))
         self.head = self.knots[0]
         self.tail = self.knots[-1]
-        self.seen_tail_positions = set([self.tail.to_tuple()])
+        self.seen_tail_positions = set([self.tail])
 
     def _adjust_rope(self):
         for pos in range(len(self.knots) - 1):
@@ -721,21 +729,12 @@ class Rope:
             follower = self.knots[pos + 1]
             dx = leader.x - follower.x
             dy = leader.y - follower.y
-            # if dy == 0:
-            #     if abs(dx) > 1:
-            #         # move one space toward leader in x dir
-            #         follower.x += abs(dx) // dx
-            # elif dx == 0:
-            #     if abs(dy) > 1:
-            #         # move one space toward leader in y dir
-            #         follower.y += abs(dy) // dy
             if abs(dx) > 1 or abs(dy) > 1:
-                # Move one space diagonally toward leader
                 if abs(dx) > 0:
                     follower.x += abs(dx) // dx
                 if abs(dy) > 0:
                     follower.y += abs(dy) // dy
-        self.seen_tail_positions.add(self.tail.to_tuple())
+        self.seen_tail_positions.add(self.tail)
 
     def move_up(self):
         self.head.y += 1
