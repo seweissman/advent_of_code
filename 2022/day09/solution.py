@@ -443,11 +443,11 @@ These motions occur as follows (individual steps are not shown):
 ..........................
 ..........................
 ..........................
+.......H1.................
+........2.................
 ..........................
-..........................
-..........................
-..........................
-...........H..............  (H covers 1, 2, 3, 4, 5, 6, 7, 8, 9, s)
+..........3..............
+...........4..............  (H covers 1, 2, 3, 4, 5, 6, 7, 8, 9, s)
 ..........................
 ..........................
 ..........................
@@ -684,6 +684,15 @@ D 1
 L 5
 R 2"""
 
+SAMPLE_INPUT_LARGE = """
+R 5
+U 8
+L 8
+D 3
+R 17
+D 10
+L 25
+U 20"""
 
 class Position:
     def __init__(self, x: int, y: int):
@@ -701,50 +710,55 @@ class Position:
 
 
 class Rope:
-    def __init__(self):
-        self.head: Position = Position(0, 0)
-        self.tail: Position = Position(0, 0)
+    def __init__(self, n_knots: int):
+        self.knots: List[Position] = []
+        for _ in range(n_knots):
+            self.knots.append(Position(0, 0))
+        self.head = self.knots[0]
+        self.tail = self.knots[-1]
         self.seen_tail_positions = set([self.tail.to_tuple()])
 
-    def _adjust_tail(self):
-        if abs(self.head.y - self.tail.y) > 1:
-            if self.head.y > self.tail.y:
-                self.tail.y += 1
-            else:
-                self.tail.y -= 1
-            if self.tail.x != self.head.x:
-                self.tail.x = self.head.x
-        elif abs(self.head.x - self.tail.x) > 1:
-            if self.head.x > self.tail.x:
-                self.tail.x += 1
-            else:
-                self.tail.x -= 1
-            if self.tail.y != self.head.y:
-                self.tail.y = self.head.y
+    def _adjust_rope(self):
+        for pos in range(len(self.knots) - 1):
+            leader = self.knots[pos]
+            follower = self.knots[pos + 1]
+            xdiff = leader.x - follower.x
+            ydiff = leader.y - follower.y
+            if ydiff == 0:
+                if abs(xdiff) > 1:
+                    # move one space toward leader in x dir
+                    follower.x += abs(xdiff) // xdiff
+            elif xdiff == 0:
+                if abs(ydiff) > 1:
+                    # move one space toward leader in y dir
+                    follower.y += abs(ydiff) // ydiff
+            elif abs(xdiff) > 1 or abs(ydiff) > 1:
+                # Move one space diagonally toward leader
+                follower.x += abs(xdiff) // xdiff
+                follower.y += abs(ydiff) // ydiff
         self.seen_tail_positions.add(self.tail.to_tuple())
 
     def move_up(self):
         self.head.y += 1
-        self._adjust_tail()
+        self._adjust_rope()
 
     def move_down(self):
         self.head.y -= 1
-        self._adjust_tail()
+        self._adjust_rope()
 
     def move_right(self):
         self.head.x += 1
-        self._adjust_tail()
+        self._adjust_rope()
 
     def move_left(self):
         self.head.x -= 1
-        self._adjust_tail()
+        self._adjust_rope()
 
-    def get_position_count(self):
+    def get_position_count(self) -> int:
         return len(self.seen_tail_positions)
 
 
-def move_rope(moves: List[str]) -> int:
-    rope = Rope()
+def run_moves(moves: List[str], rope: Rope):
     for move in moves:
         dir, spaces = move.split(" ")
         spaces = int(spaces)
@@ -760,13 +774,25 @@ def move_rope(moves: List[str]) -> int:
         elif dir == "L":
             for _ in range(spaces):
                 rope.move_left()
-    return rope.get_position_count()
+        else:
+            raise Exception(f"unknown move {move}")
 
 
 def test_move_rope():
     moves = parse_input(SAMPLE_INPUT)
-    ct = move_rope(moves)
+    rope = Rope(2)
+    run_moves(moves, rope)
+    ct = rope.get_position_count()
     assert ct == 13
+    rope = Rope(10)
+    run_moves(moves, rope)
+    ct = rope.get_position_count()
+    assert ct == 1
+    moves = parse_input(SAMPLE_INPUT_LARGE)
+    rope = Rope(10)
+    run_moves(moves, rope)
+    ct = rope.get_position_count()
+    assert ct == 36
 
 
 def parse_input(text: str) -> List[str]:
@@ -779,8 +805,15 @@ def main():
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
     moves = parse_input(input_text)
-    ct = move_rope(moves)
+    rope = Rope(2)
+    run_moves(moves, rope)
+    ct = rope.get_position_count()
     print("Part 1:", ct)
+
+    rope = Rope(10)
+    run_moves(moves, rope)
+    ct = rope.get_position_count()
+    print("Part 2:", ct)
 
 
 if __name__ == "__main__":
