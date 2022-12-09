@@ -699,9 +699,6 @@ class Position:
         self.x = x
         self.y = y
 
-    def __hash__(self):
-        return (self.x, self.y).__hash__()
-
     def __repr__(self):
         return f"({self.x},{self.y})"
 
@@ -724,18 +721,20 @@ class Rope:
             follower = self.knots[pos + 1]
             dx = leader.x - follower.x
             dy = leader.y - follower.y
-            if dy == 0:
-                if abs(dx) > 1:
-                    # move one space toward leader in x dir
-                    follower.x += abs(dx) // dx
-            elif dx == 0:
-                if abs(dy) > 1:
-                    # move one space toward leader in y dir
-                    follower.y += abs(dy) // dy
-            elif abs(dx) > 1 or abs(dy) > 1:
+            # if dy == 0:
+            #     if abs(dx) > 1:
+            #         # move one space toward leader in x dir
+            #         follower.x += abs(dx) // dx
+            # elif dx == 0:
+            #     if abs(dy) > 1:
+            #         # move one space toward leader in y dir
+            #         follower.y += abs(dy) // dy
+            if abs(dx) > 1 or abs(dy) > 1:
                 # Move one space diagonally toward leader
-                follower.x += abs(dx) // dx
-                follower.y += abs(dy) // dy
+                if abs(dx) > 0:
+                    follower.x += abs(dx) // dx
+                if abs(dy) > 0:
+                    follower.y += abs(dy) // dy
         self.seen_tail_positions.add(self.tail.to_tuple())
 
     def move_up(self):
