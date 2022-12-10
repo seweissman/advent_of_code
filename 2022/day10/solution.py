@@ -471,20 +471,20 @@ noop"""
 
 class CPU:
     def __init__(self):
-        self.clock = 1
-        self.x = 1
-        self.cycle_vals = []
-        self.screen = []
+        self.clock: int = 1
+        self.x: int = 1
+        self.cycle_vals: List[int] = []
+        self.screen: List[str] = []
 
-    def addx(self, val: int):
+    def addx(self, val: int) -> None:
         self.tick()
         self.tick()
         self.x += val
 
-    def noop(self):
+    def noop(self) -> None:
         self.tick()
 
-    def tick(self):
+    def tick(self) -> None:
         if (self.clock - 1) % 40 == 0:
             self.screen.append("")
         if (self.clock + 20) % 40 == 0:
@@ -495,7 +495,7 @@ class CPU:
             self.screen[-1] += "."
         self.clock += 1
 
-    def signal_strength(self):
+    def signal_strength(self) -> int:
         return sum([v * ((i + 1) * 40 - 20) for i, v in enumerate(self.cycle_vals[0:6])])
 
     def display_screen(self) -> str:
