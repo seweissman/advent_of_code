@@ -474,7 +474,7 @@ class CPU:
         self.clock = 1
         self.x = 1
         self.cycle_vals = []
-        self.screen = [""]
+        self.screen = []
 
     def addx(self, val: int):
         self.tick()
@@ -485,24 +485,21 @@ class CPU:
         self.tick()
 
     def tick(self):
+        if (self.clock - 1) % 40 == 0:
+            self.screen.append("")
         if (self.clock + 20) % 40 == 0:
             self.cycle_vals.append(self.x)
         if self.x <= ((self.clock - 1) % 40) + 1 < self.x + 3:
             self.screen[-1] += "#"
         else:
             self.screen[-1] += "."
-        if self.clock % 40 == 0:
-            self.screen.append("")
         self.clock += 1
 
     def signal_strength(self):
         return sum([v * ((i + 1) * 40 - 20) for i, v in enumerate(self.cycle_vals[0:6])])
 
-    def get_screen(self) -> List[str]:
-        return [l for l in self.screen if l]
-
     def display_screen(self) -> str:
-        return "\n".join([l for l in self.screen if l])
+        return "\n".join(self.screen)
 
 def run_instructions(instructions: List[str], cpu: CPU) -> None:
     for instruction in instructions:
@@ -527,7 +524,7 @@ def test_sample():
     cpu = CPU()
     run_instructions(instructions, cpu)
     assert cpu.signal_strength() == 13140
-    assert cpu.get_screen() == SAMPLE_OUTPUT.split("\n")
+    assert cpu.screen == SAMPLE_OUTPUT.split("\n")
 
 
 # def test_small():
@@ -560,7 +557,6 @@ def main():
 ###..#....###..####.#....#..#.#....#....
 #....#....#....#..#.#....#..#.#..#.#....
 #....####.#....#..#.#....###...##..####.
-(advent-of-code) eggplant:day10 sweissman$
 """
 
 if __name__ == "__main__":
