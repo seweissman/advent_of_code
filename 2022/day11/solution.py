@@ -210,10 +210,95 @@ Monkey 3 inspected items 105 times.
 In this example, the two most active monkeys inspected items 101 and 105 times. The level of monkey business in this situation can be found by multiplying these together: 10605.
 
 Figure out which monkeys to chase by counting how many items they inspect over 20 rounds. What is the level of monkey business after 20 rounds of stuff-slinging simian shenanigans?
+
+
+--- Part Two ---
+You're worried you might not ever get your items back. So worried, in fact, that your relief that a monkey's inspection didn't damage an item no longer causes your worry level to be divided by three.
+
+Unfortunately, that relief was all that was keeping your worry levels from reaching ridiculous levels. You'll need to find another way to keep your worry levels manageable.
+
+At this rate, you might be putting up with these monkeys for a very long time - possibly 10000 rounds!
+
+With these new rules, you can still figure out the monkey business after 10000 rounds. Using the same example above:
+
+== After round 1 ==
+Monkey 0 inspected items 2 times.
+Monkey 1 inspected items 4 times.
+Monkey 2 inspected items 3 times.
+Monkey 3 inspected items 6 times.
+
+== After round 20 ==
+Monkey 0 inspected items 99 times.
+Monkey 1 inspected items 97 times.
+Monkey 2 inspected items 8 times.
+Monkey 3 inspected items 103 times.
+
+== After round 1000 ==
+Monkey 0 inspected items 5204 times.
+Monkey 1 inspected items 4792 times.
+Monkey 2 inspected items 199 times.
+Monkey 3 inspected items 5192 times.
+
+== After round 2000 ==
+Monkey 0 inspected items 10419 times.
+Monkey 1 inspected items 9577 times.
+Monkey 2 inspected items 392 times.
+Monkey 3 inspected items 10391 times.
+
+== After round 3000 ==
+Monkey 0 inspected items 15638 times.
+Monkey 1 inspected items 14358 times.
+Monkey 2 inspected items 587 times.
+Monkey 3 inspected items 15593 times.
+
+== After round 4000 ==
+Monkey 0 inspected items 20858 times.
+Monkey 1 inspected items 19138 times.
+Monkey 2 inspected items 780 times.
+Monkey 3 inspected items 20797 times.
+
+== After round 5000 ==
+Monkey 0 inspected items 26075 times.
+Monkey 1 inspected items 23921 times.
+Monkey 2 inspected items 974 times.
+Monkey 3 inspected items 26000 times.
+
+== After round 6000 ==
+Monkey 0 inspected items 31294 times.
+Monkey 1 inspected items 28702 times.
+Monkey 2 inspected items 1165 times.
+Monkey 3 inspected items 31204 times.
+
+== After round 7000 ==
+Monkey 0 inspected items 36508 times.
+Monkey 1 inspected items 33488 times.
+Monkey 2 inspected items 1360 times.
+Monkey 3 inspected items 36400 times.
+
+== After round 8000 ==
+Monkey 0 inspected items 41728 times.
+Monkey 1 inspected items 38268 times.
+Monkey 2 inspected items 1553 times.
+Monkey 3 inspected items 41606 times.
+
+== After round 9000 ==
+Monkey 0 inspected items 46945 times.
+Monkey 1 inspected items 43051 times.
+Monkey 2 inspected items 1746 times.
+Monkey 3 inspected items 46807 times.
+
+== After round 10000 ==
+Monkey 0 inspected items 52166 times.
+Monkey 1 inspected items 47830 times.
+Monkey 2 inspected items 1938 times.
+Monkey 3 inspected items 52013 times.
+After 10000 rounds, the two most active monkeys inspected items 52166 and 52013 times. Multiplying these together, the level of monkey business in this situation is now 2713310158.
+
+Worry levels are no longer divided by three after each item is inspected; you'll need to find another way to keep your worry levels manageable. Starting again from the initial state in your puzzle input, what is the level of monkey business after 10000 rounds?
 """
 
 from collections import deque
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Tuple
 
 
 class Monkey:
@@ -221,24 +306,26 @@ class Monkey:
         self,
         starting_items: List[int],
         operation: Callable[[int], int],
-        test: Callable[[int], bool],
+        divisor: int,
         success_monkey: int,
         failure_monkey: int,
+        worry_factor: int = 3,
     ):
         self.items = deque(starting_items)
         self.operation = operation
-        self.test = test
+        self.divisor = divisor
         self.success_monkey = success_monkey
         self.failure_monkey = failure_monkey
         self.inspection_ct = 0
+        self.worry_factor = worry_factor
 
-    def inspect_and_pass(self) -> Union[Tuple[int, int], None]:
+    def inspect_and_pass(self) -> Tuple[int, int]:
         if len(self.items) == 0:
-            return None
+            return -1, -1
         self.inspection_ct += 1
         item = self.items.popleft()
-        value = self.operation(item) // 3
-        test_result = self.test(value)
+        value = self.operation(item) // self.worry_factor
+        test_result = value % self.divisor == 0
         if test_result:
             return value, self.success_monkey
         return value, self.failure_monkey
@@ -246,8 +333,11 @@ class Monkey:
     def add_item(self, item: int):
         self.items.append(item)
 
+    def get_items(self) -> List[int]:
+        return list(self.items)
+
     @classmethod
-    def make_monkey(cls, input_lines: List[str]) -> "Monkey":
+    def make_monkey(cls, input_lines: List[str], worry_factor: int = 3) -> "Monkey":
         starting_line = input_lines[0]
         items_str = starting_line.split(": ")[1]
         items = [int(item) for item in items_str.split(", ")]
@@ -274,12 +364,11 @@ class Monkey:
         test_line = input_lines[2]
         divisor_str = test_line.split(" by ")[1]
         divisor = int(divisor_str)
-        test = lambda x: x % divisor == 0
         true_line = input_lines[3]
         true_monkey = int(true_line.split("monkey ")[1])
         false_line = input_lines[4]
         false_monkey = int(false_line.split("monkey ")[1])
-        return cls(items, operation, test, true_monkey, false_monkey)
+        return cls(items, operation, divisor, true_monkey, false_monkey, worry_factor=worry_factor)
 
 
 SAMPLE_INPUT = """
@@ -318,19 +407,19 @@ def parse_input(text: str) -> List[str]:
     return lines
 
 
-def get_monkeys(lines: List[str]) -> List[Monkey]:
+def get_monkeys(lines: List[str], worry_factor: int = 3) -> List[Monkey]:
     monkeys = []
     monkey_lines = []
     for line in lines:
         if line.startswith("Monkey"):
             if len(monkey_lines) > 0:
-                monkey = Monkey.make_monkey(monkey_lines)
+                monkey = Monkey.make_monkey(monkey_lines, worry_factor=worry_factor)
                 monkeys.append(monkey)
                 monkey_lines = []
         else:
             monkey_lines.append(line)
     if monkey_lines:
-        last_monkey = Monkey.make_monkey(monkey_lines)
+        last_monkey = Monkey.make_monkey(monkey_lines, worry_factor=worry_factor)
         monkeys.append(last_monkey)
     return monkeys
 
@@ -345,20 +434,25 @@ def test_make_monkey():
     lines = parse_input(SAMPLE_INPUT)
     monkey_lines = lines[1:6]
     monkey = Monkey.make_monkey(monkey_lines)
-    assert list(monkey.items) == [79, 98]
+    assert monkey.get_items() == [79, 98]
     assert monkey.operation(79) == 79 * 19
-    assert monkey.test(79 * 19) == ((79 * 19) % 23 == 0)
+    assert monkey.divisor == 23
     assert monkey.failure_monkey == 3
     assert monkey.success_monkey == 2
 
 
-def run_round(monkeys: List[Monkey]):
+def run_round(monkeys: List[Monkey], use_lcm=False):
+    # We know that monkey divisors are all prime so lcm is the product
+    lcm = 1
+    for monkey in monkeys:
+        lcm = monkey.divisor * lcm
     for monkey in monkeys:
         while True:
-            output = monkey.inspect_and_pass()
-            if not output:
+            value, pass_monkey_index = monkey.inspect_and_pass()
+            if pass_monkey_index < 0:
                 break
-            value, pass_monkey_index = output
+            if use_lcm:
+                value = value % lcm
             monkeys[pass_monkey_index].add_item(value)
 
 
@@ -368,25 +462,47 @@ def monkey_business(monkeys: List[Monkey]) -> int:
     return cts[-1] * cts[-2]
 
 
-def test_round():
+def test_part1():
     input_lines = parse_input(SAMPLE_INPUT)
     monkeys = get_monkeys(input_lines)
     run_round(monkeys)
-    assert list(monkeys[0].items) == [20, 23, 27, 26]
-    assert list(monkeys[1].items) == [2080, 25, 167, 207, 401, 1046]
-    assert len(monkeys[2].items) == 0
-    assert len(monkeys[3].items) == 0
+    assert monkeys[0].get_items() == [20, 23, 27, 26]
+    assert monkeys[1].get_items() == [2080, 25, 167, 207, 401, 1046]
+    assert len(monkeys[2].get_items()) == 0
+    assert len(monkeys[3].get_items()) == 0
     for _ in range(19):
         run_round(monkeys)
-    assert list(monkeys[0].items) == [10, 12, 14, 26, 34]
-    assert list(monkeys[1].items) == [245, 93, 53, 199, 115]
-    assert len(monkeys[2].items) == 0
-    assert len(monkeys[3].items) == 0
+    assert monkeys[0].get_items() == [10, 12, 14, 26, 34]
+    assert monkeys[1].get_items() == [245, 93, 53, 199, 115]
+    assert len(monkeys[2].get_items()) == 0
+    assert len(monkeys[3].get_items()) == 0
     assert monkeys[0].inspection_ct == 101
     assert monkeys[1].inspection_ct == 95
     assert monkeys[2].inspection_ct == 7
     assert monkeys[3].inspection_ct == 105
     assert monkey_business(monkeys) == 10605
+
+
+def test_part2():
+    input_lines = parse_input(SAMPLE_INPUT)
+    monkeys = get_monkeys(input_lines, worry_factor=1)
+    run_round(monkeys, use_lcm=True)
+    assert monkeys[0].inspection_ct == 2
+    assert monkeys[1].inspection_ct == 4
+    assert monkeys[2].inspection_ct == 3
+    assert monkeys[3].inspection_ct == 6
+    for _ in range(19):
+        run_round(monkeys, use_lcm=True)
+    assert monkeys[0].inspection_ct == 99
+    assert monkeys[1].inspection_ct == 97
+    assert monkeys[2].inspection_ct == 8
+    assert monkeys[3].inspection_ct == 103
+    for i in range(10000 - 20):
+        run_round(monkeys, use_lcm=True)
+    assert monkeys[0].inspection_ct == 52166
+    assert monkeys[1].inspection_ct == 47830
+    assert monkeys[2].inspection_ct == 1938
+    assert monkeys[3].inspection_ct == 52013
 
 
 def main():
@@ -397,6 +513,11 @@ def main():
     for _ in range(20):
         run_round(monkeys)
     print("Part 1:", monkey_business(monkeys))
+    monkeys = get_monkeys(lines, worry_factor=1)
+    for _ in range(10000):
+        run_round(monkeys, use_lcm=True)
+
+    print("Part 2:", monkey_business(monkeys))
 
 
 if __name__ == "__main__":
