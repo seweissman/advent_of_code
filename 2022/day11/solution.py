@@ -309,7 +309,7 @@ class Monkey:
         divisor: int,
         success_monkey: int,
         failure_monkey: int,
-        worry_factor: int = 3,
+        worry_fn: Callable[[int], int] = lambda x: x // 3,
     ):
         self.items = deque(starting_items)
         self.operation = operation
@@ -317,14 +317,15 @@ class Monkey:
         self.success_monkey = success_monkey
         self.failure_monkey = failure_monkey
         self.inspection_ct = 0
-        self.worry_factor = worry_factor
+        self.worry_fn = worry_fn
 
     def inspect_and_pass(self) -> Tuple[int, int]:
         if len(self.items) == 0:
             return -1, -1
         self.inspection_ct += 1
         item = self.items.popleft()
-        value = self.operation(item) // self.worry_factor
+        value = self.operation(item)
+        value = self.worry_fn(value)
         test_result = value % self.divisor == 0
         if test_result:
             return value, self.success_monkey
@@ -337,7 +338,7 @@ class Monkey:
         return list(self.items)
 
     @classmethod
-    def make_monkey(cls, input_lines: List[str], worry_factor: int = 3) -> "Monkey":
+    def make_monkey(cls, input_lines: List[str]) -> "Monkey":
         starting_line = input_lines[0]
         items_str = starting_line.split(": ")[1]
         items = [int(item) for item in items_str.split(", ")]
@@ -368,7 +369,7 @@ class Monkey:
         true_monkey = int(true_line.split("monkey ")[1])
         false_line = input_lines[4]
         false_monkey = int(false_line.split("monkey ")[1])
-        return cls(items, operation, divisor, true_monkey, false_monkey, worry_factor=worry_factor)
+        return cls(items, operation, divisor, true_monkey, false_monkey)
 
 
 SAMPLE_INPUT = """
@@ -407,19 +408,19 @@ def parse_input(text: str) -> List[str]:
     return lines
 
 
-def get_monkeys(lines: List[str], worry_factor: int = 3) -> List[Monkey]:
+def get_monkeys(lines: List[str]) -> List[Monkey]:
     monkeys = []
     monkey_lines = []
     for line in lines:
         if line.startswith("Monkey"):
             if len(monkey_lines) > 0:
-                monkey = Monkey.make_monkey(monkey_lines, worry_factor=worry_factor)
+                monkey = Monkey.make_monkey(monkey_lines)
                 monkeys.append(monkey)
                 monkey_lines = []
         else:
             monkey_lines.append(line)
     if monkey_lines:
-        last_monkey = Monkey.make_monkey(monkey_lines, worry_factor=worry_factor)
+        last_monkey = Monkey.make_monkey(monkey_lines)
         monkeys.append(last_monkey)
     return monkeys
 
@@ -441,18 +442,13 @@ def test_make_monkey():
     assert monkey.success_monkey == 2
 
 
-def run_round(monkeys: List[Monkey], use_lcm=False):
+def run_round(monkeys: List[Monkey]):
     # We know that monkey divisors are all prime so lcm is the product
-    lcm = 1
-    for monkey in monkeys:
-        lcm = monkey.divisor * lcm
     for monkey in monkeys:
         while True:
             value, pass_monkey_index = monkey.inspect_and_pass()
             if pass_monkey_index < 0:
                 break
-            if use_lcm:
-                value = value % lcm
             monkeys[pass_monkey_index].add_item(value)
 
 
@@ -485,20 +481,26 @@ def test_part1():
 
 def test_part2():
     input_lines = parse_input(SAMPLE_INPUT)
-    monkeys = get_monkeys(input_lines, worry_factor=1)
-    run_round(monkeys, use_lcm=True)
+    monkeys = get_monkeys(input_lines)
+    lcm = 1
+    for monkey in monkeys:
+        lcm = monkey.divisor * lcm
+    for monkey in monkeys:
+        monkey.worry_fn = lambda x: x % lcm
+
+    run_round(monkeys)
     assert monkeys[0].inspection_ct == 2
     assert monkeys[1].inspection_ct == 4
     assert monkeys[2].inspection_ct == 3
     assert monkeys[3].inspection_ct == 6
     for _ in range(19):
-        run_round(monkeys, use_lcm=True)
+        run_round(monkeys)
     assert monkeys[0].inspection_ct == 99
     assert monkeys[1].inspection_ct == 97
     assert monkeys[2].inspection_ct == 8
     assert monkeys[3].inspection_ct == 103
     for i in range(10000 - 20):
-        run_round(monkeys, use_lcm=True)
+        run_round(monkeys)
     assert monkeys[0].inspection_ct == 52166
     assert monkeys[1].inspection_ct == 47830
     assert monkeys[2].inspection_ct == 1938
@@ -513,9 +515,15 @@ def main():
     for _ in range(20):
         run_round(monkeys)
     print("Part 1:", monkey_business(monkeys))
-    monkeys = get_monkeys(lines, worry_factor=1)
+
+    monkeys = get_monkeys(lines)
+    lcm = 1
+    for monkey in monkeys:
+        lcm = monkey.divisor * lcm
+    for monkey in monkeys:
+        monkey.worry_fn = lambda x: x % lcm
     for _ in range(10000):
-        run_round(monkeys, use_lcm=True)
+        run_round(monkeys)
 
     print("Part 2:", monkey_business(monkeys))
 
