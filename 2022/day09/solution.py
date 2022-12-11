@@ -702,9 +702,6 @@ class Position:
     def __repr__(self):
         return f"({self.x},{self.y})"
 
-    def to_tuple(self):
-        return (self.x, self.y)
-
     def __hash__(self):
         return hash(f"{self.x,self.y}")
 
