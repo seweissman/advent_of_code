@@ -93,15 +93,12 @@ def height(c: str) -> int:
 
 
 def shortest_path(grid: List[List[str]], start: Point) -> int:
-    # import pdb
-
-    # pdb.set_trace()
     h = []
     path_len = 0
     seen = set()
-    heapq.heappush(h, (path_len, (start, {start})))
+    heapq.heappush(h, (path_len, start))
     while h:
-        path_len, (curr_loc, path_set) = heapq.heappop(h)
+        path_len, curr_loc = heapq.heappop(h)
         if curr_loc in seen:
             continue
         seen.add(curr_loc)
@@ -111,12 +108,12 @@ def shortest_path(grid: List[List[str]], start: Point) -> int:
             return path_len
         next_pts = next_points(curr_loc, len(grid), len(grid[0]))
         for next_pt in next_pts:
-            if next_pt in path_set:
+            if next_pt in seen:
                 continue
             next_height = height(grid[next_pt.x][next_pt.y])
             if next_height <= curr_height + 1:
-                heapq.heappush(h, (path_len + 1, (next_pt, path_set.union({next_pt}))))
-    return 0
+                heapq.heappush(h, (path_len + 1, next_pt))
+    return -1
 
 
 def find_start(grid: List[List[str]]) -> Point:
@@ -127,6 +124,15 @@ def find_start(grid: List[List[str]]) -> Point:
     return Point(0, 0)
 
 
+def find_possible_starts(grid: List[List[str]]) -> List[Point]:
+    starts = []
+    for i in range(len(grid)):
+        for j in range(len(grid)):
+            if grid[i][j] == "S" or grid[i][j] == "a":
+                starts.append(Point(i, j))
+    return starts
+
+
 def test_sample():
     lines = parse_input(SAMPLE_INPUT)
     grid = [list(line) for line in lines]
@@ -134,6 +140,10 @@ def test_sample():
     l = shortest_path(grid, start)
     print(l)
     assert l == 31
+
+    starts = find_possible_starts(grid)
+    min_l = min([shortest_path(grid, p) for p in starts])
+    assert min_l == 29
 
 
 def parse_input(text: str) -> List[str]:
@@ -147,9 +157,18 @@ def main():
         input_text = file_in.read()
     lines = parse_input(input_text)
     grid = [list(line) for line in lines]
+
+    # Part 1
     start = find_start(grid)
     l = shortest_path(grid, start)
     print("Part 1: ", l)
+
+    # Part 2
+    starts = find_possible_starts(grid)
+    possible_paths = [shortest_path(grid, p) for p in starts]
+
+    min_l = min([path_len for path_len in possible_paths if path_len >= 0])
+    print("Part 2:", min_l)
 
 
 if __name__ == "__main__":
