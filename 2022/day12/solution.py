@@ -54,7 +54,7 @@ What is the fewest steps required to move starting from any square with elevatio
 
 import heapq
 from collections import namedtuple
-from typing import List
+from typing import List, Union
 
 Point = namedtuple("Point", ["x", "y"])
 
@@ -92,7 +92,11 @@ def height(c: str) -> int:
     return ord(c)
 
 
-def shortest_path(grid: List[List[str]], start: Point) -> int:
+def height_rev(c: str) -> int:
+    return -1 * height(c)
+
+
+def shortest_path(grid: List[List[str]], start: Point, finish_symbol="E", height_fn=height) -> int:
     h = []
     path_len = 0
     seen = set()
@@ -102,47 +106,39 @@ def shortest_path(grid: List[List[str]], start: Point) -> int:
         if curr_loc in seen:
             continue
         seen.add(curr_loc)
-        curr_height = height(grid[curr_loc.x][curr_loc.y])
-        # print(len(h), path_len, curr_loc, curr_height, path_set)
-        if grid[curr_loc.x][curr_loc.y] == "E":
+        curr_height = height_fn(grid[curr_loc.x][curr_loc.y])
+        if grid[curr_loc.x][curr_loc.y] == finish_symbol:
             return path_len
         next_pts = next_points(curr_loc, len(grid), len(grid[0]))
         for next_pt in next_pts:
             if next_pt in seen:
                 continue
-            next_height = height(grid[next_pt.x][next_pt.y])
+            next_height = height_fn(grid[next_pt.x][next_pt.y])
             if next_height <= curr_height + 1:
                 heapq.heappush(h, (path_len + 1, next_pt))
     return -1
 
 
-def find_start(grid: List[List[str]]) -> Point:
+def find_symbol(grid: List[List[str]], symbol: str) -> Union[Point, None]:
     for i in range(len(grid)):
-        for j in range(len(grid)):
-            if grid[i][j] == "S":
+        for j in range(len(grid[0])):
+            if grid[i][j] == symbol:
                 return Point(i, j)
-    return Point(0, 0)
-
-
-def find_possible_starts(grid: List[List[str]]) -> List[Point]:
-    starts = []
-    for i in range(len(grid)):
-        for j in range(len(grid)):
-            if grid[i][j] == "S" or grid[i][j] == "a":
-                starts.append(Point(i, j))
-    return starts
+    return None
 
 
 def test_sample():
     lines = parse_input(SAMPLE_INPUT)
     grid = [list(line) for line in lines]
-    start = find_start(grid)
+    start = find_symbol(grid, "S")
+    assert start is not None
     l = shortest_path(grid, start)
-    print(l)
     assert l == 31
 
-    starts = find_possible_starts(grid)
-    min_l = min([shortest_path(grid, p) for p in starts])
+    end = find_symbol(grid, "E")
+    assert end is not None
+    assert end == Point(2, 5)
+    min_l = shortest_path(grid, end, finish_symbol="a", height_fn=height_rev)
     assert min_l == 29
 
 
@@ -159,16 +155,18 @@ def main():
     grid = [list(line) for line in lines]
 
     # Part 1
-    start = find_start(grid)
+    start = find_symbol(grid, "S")
+    if start is None:
+        raise Exception("No start found")
     l = shortest_path(grid, start)
     print("Part 1: ", l)
 
     # Part 2
-    starts = find_possible_starts(grid)
-    possible_paths = [shortest_path(grid, p) for p in starts]
-
-    min_l = min([path_len for path_len in possible_paths if path_len >= 0])
-    print("Part 2:", min_l)
+    end = find_symbol(grid, "E")
+    if end is None:
+        raise Exception("No end found")
+    l = shortest_path(grid, end, height_fn=height_rev, finish_symbol="a")
+    print("Part 2:", l)
 
 
 if __name__ == "__main__":
