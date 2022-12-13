@@ -120,7 +120,6 @@ def compare(a: Union[List, int], b: Union[List, int]) -> int:
     # If both values are integers, the lower integer should come first. If the left integer is lower than the right
     # integer, the inputs are in the right order. If the left integer is higher than the right integer, the inputs
     # are not in the right order. Otherwise, the inputs are the same integer; continue checking the next part of the input.
-    # print(f"compare\n\t{a}\n\t{b}")
     if isinstance(a, int) and isinstance(b, int):
         return a - b
 
@@ -130,12 +129,8 @@ def compare(a: Union[List, int], b: Union[List, int]) -> int:
     # the next part of the input.
 
     if isinstance(a, list) and isinstance(b, list):
-        if len(a) == 0 and len(b) == 0:
-            return 0
-        if len(a) == 0:
-            return -1
-        if len(b) == 0:
-            return 1
+        if len(a) == 0 or len(b) == 0:
+            return len(a) - len(b)
         c = compare(a[0], b[0])
         if c == 0:
             return compare(a[1:], b[1:])
@@ -212,6 +207,7 @@ def test_sample():
 
 def parse_input(text: str) -> List:
     """Parse lines of input from raw text"""
+    # These strings are already formatted like python lists so we can cheat and use eval to turn them into lists of ints
     lines = [eval(line.strip()) for line in text.split("\n") if line.strip()]
     return lines
 
