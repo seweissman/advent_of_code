@@ -224,15 +224,25 @@ class InfiniteFloorGrid(Grid):
         return False
 
 
-def drop_sand(grid: Grid) -> bool:
+PointStack = List[Tuple[int, int]]
+
+
+def drop_sand(grid: Grid, path_stack: PointStack) -> PointStack:
     """
-    Returns true if sand comes to rest, False if it falls off grid or there is no more room in the grid.
+    Returns the path taken by the sand as a list of (row, col) coords if it comes to rest.
+    Path is empty if the sand grain falls off or there is no more room.
     """
-    curr_row = 0
-    curr_col = 500
+    if path_stack is None:
+        path_stack = [(0, 500)]
+
+    if len(path_stack) == 0:
+        return []
+
+    curr_row, curr_col = path_stack.pop()
     if grid.occupied(curr_row, curr_col):
-        return False
+        return []
     while True:
+        path_stack.append((curr_row, curr_col))
         if not grid.occupied(curr_row + 1, curr_col):
             curr_row += 1
         elif not grid.occupied(curr_row + 1, curr_col - 1):
@@ -245,25 +255,39 @@ def drop_sand(grid: Grid) -> bool:
             break
 
         if grid.is_out_of_bounds(curr_row, curr_col):
-            return False
+            return []
 
     grid.add_sand(curr_row, curr_col)
-    return True
+    return path_stack
+
+
+def run_sand_drop(grid: Grid) -> int:
+    """
+    Returns the number of grains of sand that can be dropped until the grid is full or sand is dropped
+    out of bounds.
+    """
+    sand_count = 0
+    # Keep track of the path we have taken so we can backtrack to the last step vs starting
+    # from the beginning
+    row_stack = [(0, 500)]
+    while True:
+        row_stack = drop_sand(grid, row_stack)
+        if not row_stack:
+            break
+        row_stack.pop()
+        sand_count += 1
+    return sand_count
 
 
 def test_sample_grid():
     input_lines = parse_input(SAMPLE_INPUT)
     grid = Grid.build_grid(input_lines)
-    sand_count = 0
-    while drop_sand(grid):
-        sand_count += 1
+    sand_count = run_sand_drop(grid)
     grid.print()
     assert sand_count == 24
 
     grid = InfiniteFloorGrid.build_grid(input_lines)
-    sand_count = 0
-    while drop_sand(grid):
-        sand_count += 1
+    sand_count = run_sand_drop(grid)
     grid.print()
     assert sand_count == 93
 
@@ -285,18 +309,14 @@ def main():
         input_text = file_in.read()
     lines = parse_input(input_text)
     grid = Grid.build_grid(lines)
-    sand_count = 0
-    while drop_sand(grid):
-        sand_count += 1
-    print("Part 1: ", sand_count)
+    sand_count = run_sand_drop(grid)
     grid.print()
+    print("Part 1: ", sand_count)
 
     grid = InfiniteFloorGrid.build_grid(lines)
-    sand_count = 0
-    while drop_sand(grid):
-        sand_count += 1
-    print("Part 2: ", sand_count)
+    sand_count = run_sand_drop(grid)
     grid.print(min_col=450, max_col=550)
+    print("Part 2: ", sand_count)
 
 
 if __name__ == "__main__":
