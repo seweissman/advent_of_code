@@ -162,6 +162,12 @@ class Grid:
                 self.contents[Point(start.col, row)] = "#"
 
     def add_sand(self, row: int, col: int):
+        # if row > self.max_row:
+        #    self.max_row = row
+        if col > self.max_col:
+            self.max_col = col
+        if col < self.min_col:
+            self.min_col = col
         self.contents[Point(col, row)] = "o"
 
     def occupied(self, row: int, col: int) -> bool:
@@ -175,11 +181,15 @@ class Grid:
             return True
         return False
 
-    def print(self):
+    def print(self, min_col=None, max_col=None):
+        if min_col is None:
+            min_col = self.min_col
+        if max_col is None:
+            max_col = self.max_col
         print("\n")
         for row in range(0, self.max_row + 1):
             row_str = ""
-            for col in range(self.min_col, self.max_col + 1):
+            for col in range(min_col, max_col + 1):
                 if self.occupied(row, col):
                     row_str += self.get_contents(row, col)
                 else:
@@ -250,14 +260,14 @@ def test_sample_grid():
     sand_count = 0
     while drop_sand(grid):
         sand_count += 1
-        # grid.print()
+    grid.print()
     assert sand_count == 24
 
     grid = InfiniteFloorGrid.build_grid(input_lines)
     sand_count = 0
     while drop_sand(grid):
         sand_count += 1
-        # grid.print()
+    grid.print()
     assert sand_count == 93
 
 
@@ -289,7 +299,7 @@ def main():
     while drop_sand(grid):
         sand_count += 1
     print("Part 2: ", sand_count)
-    grid.print()
+    grid.print(min_col=400, max_col=550)
 
 
 if __name__ == "__main__":
