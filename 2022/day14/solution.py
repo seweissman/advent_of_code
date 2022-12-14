@@ -187,6 +187,25 @@ class Grid:
             print(row_str)
         print("\n")
 
+    @classmethod
+    def build_grid(cls, input_lines) -> "Grid":
+        def make_ranges(input_line: str) -> List[Tuple[Point, Point]]:
+            ranges = []
+            input_points = input_line.split(" -> ")
+            range_pairs = [(input_points[i], input_points[i + 1]) for i in range(0, len(input_points) - 1)]
+            for start_str, end_str in range_pairs:
+                start = Point(*[int(s) for s in start_str.split(",")])
+                end = Point(*[int(s) for s in end_str.split(",")])
+                ranges.append((start, end))
+            return ranges
+
+        grid = cls()
+        for line in input_lines:
+            ranges = make_ranges(line)
+            for r in ranges:
+                grid.add_rock_range(*r)
+        return grid
+
 
 class InfiniteFloorGrid(Grid):
     def occupied(self, row: int, col: int) -> bool:
@@ -225,45 +244,16 @@ def drop_sand(grid: Grid) -> bool:
     return True
 
 
-def make_ranges(input_line: str) -> List[Tuple[Point, Point]]:
-    ranges = []
-    input_points = input_line.split(" -> ")
-    range_pairs = [(input_points[i], input_points[i + 1]) for i in range(0, len(input_points) - 1)]
-    for start_str, end_str in range_pairs:
-        start = Point(*[int(s) for s in start_str.split(",")])
-        end = Point(*[int(s) for s in end_str.split(",")])
-        ranges.append((start, end))
-    return ranges
-
-
-def build_grid(input_lines) -> Grid:
-    grid = Grid()
-    for line in input_lines:
-        ranges = make_ranges(line)
-        for range in ranges:
-            grid.add_rock_range(*range)
-    return grid
-
-
-def build_infinite_grid(input_lines) -> Grid:
-    grid = InfiniteFloorGrid()
-    for line in input_lines:
-        ranges = make_ranges(line)
-        for range in ranges:
-            grid.add_rock_range(*range)
-    return grid
-
-
 def test_sample_grid():
     input_lines = parse_input(SAMPLE_INPUT)
-    grid = build_grid(input_lines)
+    grid = Grid.build_grid(input_lines)
     sand_count = 0
     while drop_sand(grid):
         sand_count += 1
         # grid.print()
     assert sand_count == 24
 
-    grid = build_infinite_grid(input_lines)
+    grid = InfiniteFloorGrid.build_grid(input_lines)
     sand_count = 0
     while drop_sand(grid):
         sand_count += 1
@@ -287,14 +277,14 @@ def main():
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
     lines = parse_input(input_text)
-    grid = build_grid(lines)
+    grid = Grid.build_grid(lines)
     sand_count = 0
     while drop_sand(grid):
         sand_count += 1
     print("Part 1: ", sand_count)
     grid.print()
 
-    grid = build_infinite_grid(lines)
+    grid = InfiniteFloorGrid.build_grid(lines)
     sand_count = 0
     while drop_sand(grid):
         sand_count += 1
