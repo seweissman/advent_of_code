@@ -128,46 +128,42 @@ class Grid:
         self.max_col = -1
         self.min_col = -1
 
-    def add_rock_range(self, start: Point, end: Point):
+    def _update_min_max(self, row, col):
         if self.min_col == -1:
-            self.min_col = start.col
+            self.min_col = col
         if self.max_col == -1:
-            self.max_col = start.col
+            self.max_col = col
         if self.max_row == -1:
-            self.max_row = start.row
+            self.max_row = row
+
+        if col < self.min_col:
+            self.min_col = col
+        if col > self.max_col:
+            self.max_col = col
+        if row > self.max_row:
+            self.max_row = row
+
+    def add_rock_range(self, start: Point, end: Point):
+
+        self._update_min_max(start.row, start.col)
+        self._update_min_max(end.row, end.col)
 
         if start.row == end.row:
             # Horizontal
             min_col = min(start.col, end.col)
             max_col = max(start.col, end.col)
-            if min_col < self.min_col:
-                self.min_col = min_col
-            if max_col > self.max_col:
-                self.max_col = max_col
-            if start.row > self.max_row:
-                self.max_row = start.row
             for col in range(min_col, max_col + 1):
                 self.contents[Point(col, start.row)] = "#"
         else:
             # Vertical
             min_row = min(start.row, end.row)
             max_row = max(start.row, end.row)
-            if max_row > self.max_row:
-                self.max_row = max_row
-            if start.col > self.max_col:
-                self.max_col = start.col
-            if start.col < self.min_col:
-                self.min_col = start.col
             for row in range(min_row, max_row + 1):
                 self.contents[Point(start.col, row)] = "#"
 
     def add_sand(self, row: int, col: int):
-        # if row > self.max_row:
-        #    self.max_row = row
-        if col > self.max_col:
-            self.max_col = col
-        if col < self.min_col:
-            self.min_col = col
+        # Don't update max_row when we add sand
+        self._update_min_max(self.max_row, col)
         self.contents[Point(col, row)] = "o"
 
     def occupied(self, row: int, col: int) -> bool:
@@ -299,7 +295,7 @@ def main():
     while drop_sand(grid):
         sand_count += 1
     print("Part 2: ", sand_count)
-    grid.print(min_col=400, max_col=550)
+    grid.print(min_col=450, max_col=550)
 
 
 if __name__ == "__main__":
