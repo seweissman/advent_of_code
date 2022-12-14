@@ -121,35 +121,6 @@ from typing import Dict, List, Tuple
 
 Point = namedtuple("Point", ["col", "row"])
 
-
-class Orientation(Enum):
-    VERTICAL = 1
-    HORIZONTAL = 2
-
-
-class RockRange:
-    def __init__(self, start: Point, end: Point):
-        if start.row == end.row:
-            self.orientation = Orientation.HORIZONTAL
-            self.pos = start.row
-            self.start = min(start.col, end.col)
-            self.end = max(start.col, end.col)
-        else:
-            self.orientation = Orientation.VERTICAL
-            self.pos = start.col
-            self.start = min(start.row, end.row)
-            self.end = max(start.row, end.row)
-
-    def covers(self, row: int, col: int) -> bool:
-        if self.orientation == Orientation.HORIZONTAL:
-            if row == self.pos and self.start <= col <= self.end:
-                return True
-        if self.orientation == Orientation.VERTICAL:
-            if col == self.pos and self.start <= row <= self.end:
-                return True
-        return False
-
-
 class Grid:
     def __init__(self):
         self.contents: Dict[Point, str] = {}
@@ -199,6 +170,11 @@ class Grid:
     def get_contents(self, row, col) -> str:
         return self.contents[Point(col, row)]
 
+    def out_of_bounds(self, row: int, col: int) -> bool:
+        if row > self.max_row:
+            return True
+        return False
+
     def print(self):
         print("\n")
         for row in range(0, self.max_row + 1):
@@ -212,10 +188,24 @@ class Grid:
         print("\n")
 
 
+class InfiniteFloorGrid(Grid):
+    def occupied(self, row: int, col: int) -> bool:
+        if row >= self.max_row + 2:
+            return True
+        return super().occupied(row, col)
+
+    def out_of_bounds(self, row: int, col: int) -> bool:
+        return False
+
+
 def drop_sand(grid: Grid) -> bool:
-    """Returns true if sand comes to rest, False if it falls off grid"""
+    """
+    Returns true if sand comes to rest, False if it falls off grid or there is no more room in the grid.
+    """
     curr_row = 0
     curr_col = 500
+    if grid.occupied(curr_row, curr_col):
+        return False
     while True:
         if not grid.occupied(curr_row + 1, curr_col):
             curr_row += 1
@@ -228,7 +218,7 @@ def drop_sand(grid: Grid) -> bool:
         else:
             break
 
-        if curr_row > grid.max_row:
+        if grid.out_of_bounds(curr_row, curr_col):
             return False
 
     grid.add_sand(curr_row, curr_col)
@@ -255,14 +245,30 @@ def build_grid(input_lines) -> Grid:
     return grid
 
 
+def build_infinite_grid(input_lines) -> Grid:
+    grid = InfiniteFloorGrid()
+    for line in input_lines:
+        ranges = make_ranges(line)
+        for range in ranges:
+            grid.add_rock_range(*range)
+    return grid
+
+
 def test_sample_grid():
     input_lines = parse_input(SAMPLE_INPUT)
     grid = build_grid(input_lines)
     sand_count = 0
     while drop_sand(grid):
         sand_count += 1
-        grid.print()
+        # grid.print()
     assert sand_count == 24
+
+    grid = build_infinite_grid(input_lines)
+    sand_count = 0
+    while drop_sand(grid):
+        sand_count += 1
+        # grid.print()
+    assert sand_count == 93
 
 
 SAMPLE_INPUT = """
@@ -286,6 +292,14 @@ def main():
     while drop_sand(grid):
         sand_count += 1
     print("Part 1: ", sand_count)
+    grid.print()
+
+    grid = build_infinite_grid(lines)
+    sand_count = 0
+    while drop_sand(grid):
+        sand_count += 1
+    print("Part 2: ", sand_count)
+    grid.print()
 
 
 if __name__ == "__main__":
