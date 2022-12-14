@@ -117,16 +117,17 @@ Using your scan, simulate the falling sand. How many units of sand come to rest 
 
 from collections import namedtuple
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 Point = namedtuple("Point", ["col", "row"])
 
 class Grid:
     def __init__(self):
         self.contents: Dict[Point, str] = {}
-        self.max_row = -1
-        self.max_col = -1
-        self.min_col = -1
+        # Min row is always 0
+        self.max_row: int = -1
+        self.max_col: int = -1
+        self.min_col: int = -1
 
     def _update_min_max(self, row, col):
         if self.min_col == -1:
@@ -143,7 +144,7 @@ class Grid:
         if row > self.max_row:
             self.max_row = row
 
-    def add_rock_range(self, start: Point, end: Point):
+    def _add_rock_range(self, start: Point, end: Point):
 
         self._update_min_max(start.row, start.col)
         self._update_min_max(end.row, end.col)
@@ -169,15 +170,15 @@ class Grid:
     def occupied(self, row: int, col: int) -> bool:
         return Point(col, row) in self.contents
 
-    def get_contents(self, row, col) -> str:
+    def get_contents(self, row: int, col: int) -> str:
         return self.contents[Point(col, row)]
 
-    def out_of_bounds(self, row: int, col: int) -> bool:
+    def is_out_of_bounds(self, row: int, col: int) -> bool:
         if row > self.max_row:
             return True
         return False
 
-    def print(self, min_col=None, max_col=None):
+    def print(self, min_col: Union[int, None] = None, max_col: Union[int, None] = None) -> None:
         if min_col is None:
             min_col = self.min_col
         if max_col is None:
@@ -194,7 +195,7 @@ class Grid:
         print("\n")
 
     @classmethod
-    def build_grid(cls, input_lines) -> "Grid":
+    def build_grid(cls, input_lines: List[str]) -> "Grid":
         def make_ranges(input_line: str) -> List[Tuple[Point, Point]]:
             ranges = []
             input_points = input_line.split(" -> ")
@@ -209,7 +210,7 @@ class Grid:
         for line in input_lines:
             ranges = make_ranges(line)
             for r in ranges:
-                grid.add_rock_range(*r)
+                grid._add_rock_range(*r)
         return grid
 
 
@@ -219,7 +220,7 @@ class InfiniteFloorGrid(Grid):
             return True
         return super().occupied(row, col)
 
-    def out_of_bounds(self, row: int, col: int) -> bool:
+    def is_out_of_bounds(self, row: int, col: int) -> bool:
         return False
 
 
@@ -243,7 +244,7 @@ def drop_sand(grid: Grid) -> bool:
         else:
             break
 
-        if grid.out_of_bounds(curr_row, curr_col):
+        if grid.is_out_of_bounds(curr_row, curr_col):
             return False
 
     grid.add_sand(curr_row, curr_col)
@@ -273,7 +274,7 @@ SAMPLE_INPUT = """
 """
 
 
-def parse_input(text: str) -> List:
+def parse_input(text: str) -> List[str]:
     """Parse lines of input from raw text"""
     lines = [line.strip() for line in text.split("\n") if line.strip()]
     return lines
