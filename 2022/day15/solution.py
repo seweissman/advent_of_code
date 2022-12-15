@@ -112,12 +112,6 @@ class Sensor:
     def distance(self, col: int, row: int):
         return abs(self.location.col - col) + abs(self.location.row - row)
 
-    def in_range_and_not_detected(self, row: int, col: int) -> bool:
-        if self.distance(col, row) <= self.max_distance:
-            if self.beacon.col != col or self.beacon.row != row:
-                return True
-        return False
-
 
 def parse_input_line(line: str) -> Sensor:
     m = re.match(f".*x=([-\d]+), y=([-\d]+): closest beacon is at x=([-\d]+), y=([-\d]+)", line)
@@ -161,33 +155,70 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
 """
 
 
-def in_range_and_not_detected(row: int, col: int, sensors: List[Sensor]) -> bool:
-    for sensor in sensors:
-        # print(row, col, sensor.location, sensor.beacon, sensor.distance(col, row), sensor.max_distance)
-        if sensor.distance(col, row) <= sensor.max_distance:
-            if sensor.beacon.col != col or sensor.beacon.row != row:
-                return True
-    return False
+class Range:
+    def __init__(self, low, high):
+        self.low = low
+        self.high = high
+
+    def __repr__(self):
+        return f"[{self.low}, {self.high}]"
+
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, Range):
+            return False
+        return self.low == __o.low and self.high == __o.high
+
+
+def combine_ranges(ranges: List[Range]) -> List[Range]:
+    changed = True
+    new_ranges = []
+    # import pdb
+
+    # pdb.set_trace()
+    for i in range(len(ranges)):
+        changed = False
+        # print(ranges, new_ranges)
+        r = ranges[i]
+        for j in range(i + 1, len(ranges)):
+            other_r = ranges[j]
+            if r.low <= other_r.low and r.high >= other_r.low:
+                ranges[j].low = r.low
+                ranges[j].high = max(r.high, other_r.high)
+                changed = True
+                break
+            elif r.low <= other_r.high and r.high >= other_r.high:
+                ranges[j].low = min(r.low, other_r.low)
+                ranges[j].high = r.high
+                changed = True
+                break
+
+        if not changed:
+            new_ranges.append(r)
+    return new_ranges
+
+
+def test_combine_ranges():
+    assert combine_ranges([Range(0, 5), Range(2, 8), Range(3, 4)]) == [Range(0, 8)]
+    assert combine_ranges([Range(0, 1), Range(3, 4)]) == [Range(0, 1), Range(3, 4)]
 
 
 def count_no_beacons(sensors: List[Sensor], row: int) -> int:
-    min_col = min([sensor.location.col - sensor.max_distance for sensor in sensors])
-    max_col = max([sensor.location.col + sensor.max_distance for sensor in sensors])
-    print("min:", min_col)
-    print("max:", max_col)
-    no_beacon_pts = set()
-    print(len(sensors))
+
+    ranges = []
     for sensor in sensors:
-        print("Sensor:", sensor.location)
         col_min = sensor.location.col - (sensor.max_distance - abs(sensor.location.row - row))
         col_max = sensor.location.col + (sensor.max_distance - abs(sensor.location.row - row))
-        print(col_min, col_max)
-        for col in range(col_min, col_max):
-            if (row, col) in no_beacon_pts:
-                continue
-            if in_range_and_not_detected(row, col, sensors):
-                no_beacon_pts.add((row, col))
-    return len(no_beacon_pts)
+        if col_min < col_max:
+            ranges.append(Range(col_min, col_max))
+
+    # print("Combined ranges: ", combine_ranges(ranges))
+
+    combined_ranges = combine_ranges(ranges)
+    range_sum = 0
+    for r in combined_ranges:
+        range_sum += r.high - r.low
+
+    return range_sum
 
 
 def test_sample():
