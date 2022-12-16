@@ -97,7 +97,7 @@ Consult the report from the sensors you just deployed. In the row where y=200000
 """
 import re
 from collections import namedtuple
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 # x is col, y is row
 Point = namedtuple("Point", ["col", "row"])
@@ -172,25 +172,31 @@ class Range:
 def combine_ranges(ranges: List[Range]) -> List[Range]:
     changed = True
     new_ranges = []
-    # import pdb
-
-    # pdb.set_trace()
     for i in range(len(ranges)):
         changed = False
-        # print(ranges, new_ranges)
         r = ranges[i]
         for j in range(i + 1, len(ranges)):
             other_r = ranges[j]
-            if r.low <= other_r.low and r.high >= other_r.low:
+            # ...[r.low   r.high]...
+            # ......[o.low    o.high]...
+            if r.low <= other_r.low and r.high >= other_r.low - 1:
                 ranges[j].low = r.low
                 ranges[j].high = max(r.high, other_r.high)
                 changed = True
                 break
-            elif r.low <= other_r.high and r.high >= other_r.high:
+            # .......[r.low     r.high]...
+            # ...[o.low    o.high]...
+            elif r.low - 1 <= other_r.high and r.high >= other_r.high:
                 ranges[j].low = min(r.low, other_r.low)
                 ranges[j].high = r.high
                 changed = True
                 break
+            elif r.low <= other_r.low and r.high >= other_r.high:
+                ranges[j].low = r.low
+                ranges[j].high = r.high
+                changed = True
+            elif other_r.low <= r.low and other_r.high >= r.high:
+                changed = True
 
         if not changed:
             new_ranges.append(r)
@@ -202,31 +208,58 @@ def test_combine_ranges():
     assert combine_ranges([Range(0, 1), Range(3, 4)]) == [Range(0, 1), Range(3, 4)]
 
 
-def count_no_beacons(sensors: List[Sensor], row: int) -> int:
-
-    ranges = []
-    for sensor in sensors:
-        col_min = sensor.location.col - (sensor.max_distance - abs(sensor.location.row - row))
-        col_max = sensor.location.col + (sensor.max_distance - abs(sensor.location.row - row))
-        if col_min < col_max:
-            ranges.append(Range(col_min, col_max))
-
-    # print("Combined ranges: ", combine_ranges(ranges))
-
-    combined_ranges = combine_ranges(ranges)
+def sum_ranges(ranges: List[Range]) -> int:
     range_sum = 0
-    for r in combined_ranges:
+    for r in ranges:
         range_sum += r.high - r.low
 
     return range_sum
 
 
-def test_sample():
+def get_no_beacon_ranges(
+    sensors: List[Sensor], row: int, col_min: Union[int, None] = None, col_max: Union[int, None] = None
+) -> List[Range]:
+
+    ranges = []
+    for sensor in sensors:
+        sensor_col_min = sensor.location.col - (sensor.max_distance - abs(sensor.location.row - row))
+        if col_min is not None:
+            sensor_col_min = max(sensor_col_min, col_min)
+        sensor_col_max = sensor.location.col + (sensor.max_distance - abs(sensor.location.row - row))
+        if col_max is not None:
+            sensor_col_max = min(col_max, sensor_col_max)
+        if sensor_col_min < sensor_col_max:
+            ranges.append(Range(sensor_col_min, sensor_col_max))
+    # print("Ranges:", ranges)
+
+    # print("Combined ranges: ", combine_ranges(ranges))
+
+    combined_ranges = combine_ranges(ranges)
+    return combined_ranges
+
+
+def test_sample_part1():
     row = 10
     input_lines = parse_input(SAMPLE_INPUT)
     sensors = [parse_input_line(input_line) for input_line in input_lines]
-    no_beacon_ct = count_no_beacons(sensors, row)
+    no_beacon_ranges = get_no_beacon_ranges(sensors, row)
+    no_beacon_ct = sum_ranges(no_beacon_ranges)
     assert no_beacon_ct == 26
+
+
+def test_sample_part2():
+    input_lines = parse_input(SAMPLE_INPUT)
+    sensors = [parse_input_line(input_line) for input_line in input_lines]
+
+    for row in range(20):
+        no_beacon_ranges = get_no_beacon_ranges(sensors, row, col_min=0, col_max=20)
+        if len(no_beacon_ranges) > 1:
+            assert len(no_beacon_ranges) == 2
+            r1, r2 = no_beacon_ranges
+            print(r1, r2)
+            missing_col = (max(r1.low, r2.low) + min(r1.high, r2.high)) // 2
+            assert missing_col == 14
+            assert missing_col * 4000000 + row == 56000011
 
 
 def parse_input(text: str) -> List[str]:
@@ -241,8 +274,16 @@ def main():
     input_lines = parse_input(input_text)
     sensors = [parse_input_line(input_line) for input_line in input_lines]
     row = 2000000
-    no_beacon_ct = count_no_beacons(sensors, row)
+    no_beacon_ranges = get_no_beacon_ranges(sensors, row)
+    no_beacon_ct = sum_ranges(no_beacon_ranges)
     print("Part 1: ", no_beacon_ct)
+
+    for row in range(4000000):
+        no_beacon_ranges = get_no_beacon_ranges(sensors, row, col_min=0, col_max=4000000)
+        if len(no_beacon_ranges) > 1:
+            r1, r2 = no_beacon_ranges
+            missing_col = (max(r1.low, r2.low) + min(r1.high, r2.high)) // 2
+            print("Part 2", missing_col * 4000000 + row)
 
 
 if __name__ == "__main__":
