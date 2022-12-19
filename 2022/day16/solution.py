@@ -152,14 +152,8 @@ from enum import Enum
 from typing import Dict, Iterable, List, Union
 
 
-class ValveState(Enum):
-    OPEN = 1
-    CLOSED = 2
-
-
 class Valve:
     def __init__(self, name, flow_rate, adjacent: List[str]):
-        self.state = ValveState.CLOSED
         self.name = name
         self.flow_rate = flow_rate
         self.adjacent = adjacent
@@ -173,7 +167,6 @@ class Valve:
                 self.dist[end] = val
 
     def open(self, time):
-        self.state = ValveState.OPEN
         self.open_time = time
 
     @classmethod
@@ -224,51 +217,39 @@ IT = 0
 from functools import cache
 
 
-@cache
 def find_max_flow_elephant(
-    valve1_name: str,
-    valve2_name: str,
+    valve1: Valve,
+    valve2: Valve,
+    valve_map: Dict[str, Valve],
     time1=0,
     time2=0,
     max_time=26,
-    path1_str="",
-    path2_str="",
+    path1=None,
+    path2=None,
     total=0,
     max_to_open=0,
 ) -> int:
-    valve1 = VALVE_MAP[valve1_name]
-    valve2 = VALVE_MAP[valve2_name]
-    if path1_str == "":
+    if path1 is None:
         path1 = []
-    else:
-        path1 = path1_str.split(",")
-    if path2_str == "":
+    if path2 is None:
         path2 = []
-    else:
-        path2 = path2_str.split(",")
 
     if max_to_open - len(path1) - len(path2) > 2 * max_time - time1 - time2:
         return 0
 
     if max_to_open == 0:
-        for valve in VALVE_MAP.values():
+        for valve in valve_map.values():
             if valve.flow_rate > 0:
                 max_to_open += 1
 
     flow_at_time1 = 0
     for v in path1:
-        flow_at_time1 += VALVE_MAP[v].flow_rate
+        flow_at_time1 += valve_map[v].flow_rate
 
     flow_at_time2 = 0
     for v in path2:
-        flow_at_time2 += VALVE_MAP[v].flow_rate
+        flow_at_time2 += valve_map[v].flow_rate
 
-    # if path1 == ["AA", "JJ", "BB"] and path2 == ["AA", "DD", "HH"]:
-    #     import pdb
-
-    #     pdb.set_trace()
-    #     print(time1, time2, (valve1.name, valve2.name), flow_at_time1, flow_at_time2, path1, path2)
-    # print(time1, time2, (valve1.name, valve2.name), flow_at_time1, flow_at_time2, path1, path2)
     valid_adj1 = [
         v
         for v, d in valve1.dist.items()
@@ -300,12 +281,13 @@ def find_max_flow_elephant(
         m = max(
             [
                 find_max_flow_elephant(
-                    valve1_name,
-                    v2,
+                    valve1,
+                    valve_map[v2],
+                    valve_map,
                     time1,
                     time2 + valve2.dist[v2] + 1,
-                    path1_str=path1_str,
-                    path2_str=",".join(path2 + [valve2.name]),
+                    path1=path1,
+                    path2=path2 + [valve2.name],
                     total=total + (flow_at_time2 + valve2.flow_rate) * (valve2.dist[v2] + 1),
                     max_to_open=max_to_open,
                 )
@@ -318,12 +300,13 @@ def find_max_flow_elephant(
         m = max(
             [
                 find_max_flow_elephant(
-                    v1,
-                    valve2_name,
+                    valve_map[v1],
+                    valve2,
+                    valve_map,
                     time1 + valve1.dist[v1] + 1,
                     time2,
-                    path1_str=",".join(path1 + [valve1.name]),
-                    path2_str=path2_str,
+                    path1=path1 + [valve1.name],
+                    path2=path2,
                     total=total + (flow_at_time1 + valve1.flow_rate) * (valve1.dist[v1] + 1),
                     max_to_open=max_to_open,
                 )
@@ -335,12 +318,13 @@ def find_max_flow_elephant(
     m = max(
         [
             find_max_flow_elephant(
-                v1,
-                v2,
+                valve_map[v1],
+                valve_map[v2],
+                valve_map,
                 time1 + valve1.dist[v1] + 1,
                 time2 + valve2.dist[v2] + 1,
-                path1_str=",".join(path1 + [valve1.name]),
-                path2_str=",".join(path2 + [valve2.name]),
+                path1=path1 + [valve1.name],
+                path2=path2 + [valve2.name],
                 total=total
                 + (flow_at_time1 + valve1.flow_rate) * (valve1.dist[v1] + 1)
                 + (flow_at_time2 + valve2.flow_rate) * (valve2.dist[v2] + 1),
@@ -358,9 +342,6 @@ def find_max_flow(valve: Valve, valve_map: Dict[str, Valve], time=0, max_time=30
     if path is None:
         path = []
     if time > max_time:
-        import pdb
-
-        pdb.set_trace()
         return 0
     flow_at_time = 0
     for v in path:
@@ -407,8 +388,6 @@ def shortest_path_all(valves: Iterable[Valve]):
     return dist
 
 
-
-
 SAMPLE_INPUT = """
 Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
 Valve BB has flow rate=13; tunnels lead to valves CC, AA
@@ -424,21 +403,16 @@ Valve JJ has flow rate=21; tunnel leads to valve II"""
 
 def test_sample_part1():
     lines = parse_input(SAMPLE_INPUT)
-
     valve_map = make_valves(lines)
-    print(shortest_path_all(valve_map.values()))
 
-    # max_flow = random_walk(valve_map, 1)
     max_flow = find_max_flow(valve_map["AA"], valve_map)
     assert max_flow == 1651
 
 
 def test_sample_part2():
     lines = parse_input(SAMPLE_INPUT)
-    global VALVE_MAP
-
-    VALVE_MAP = make_valves(lines)
-    max_flow = find_max_flow_elephant("AA", "AA")
+    valve_map = make_valves(lines)
+    max_flow = find_max_flow_elephant(valve_map["AA"], valve_map["AA"], valve_map)
     global MAX
     MAX = 0
     assert max_flow == 1707
@@ -450,21 +424,16 @@ def parse_input(text: str) -> List[str]:
     return lines
 
 
-VALVE_MAP = {}
-
 def main():
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
     lines = parse_input(input_text)
-    global VALVE_MAP
-    VALVE_MAP = make_valves(lines)
+    valve_map = make_valves(lines)
 
-    # max_flow = random_walk(valve_map, max_iterations=1000000)
     # max_flow = find_max_flow(valve_map["AA"], valve_map)
     # print("Part 1:", max_flow)
 
-    # max_flow = random_walk(valve_map, num_movers=2, max_time=26, max_iterations=5000000)
-    max_flow = find_max_flow_elephant("AA", "AA")
+    max_flow = find_max_flow_elephant(valve_map["AA"], valve_map["AA"], valve_map)
     print("Part 2:", max_flow)
 
 
