@@ -234,9 +234,11 @@ def find_max_flow_elephant(
     if path2 is None:
         path2 = []
 
+    # Assuming we will open all valves, if we don't have enough moves left to do that, short circuit this path
     if max_to_open - len(path1) - len(path2) > 2 * max_time - time1 - time2:
         return 0
 
+    # Set max_to_open to number of valves with nonzero flow if it isn't set
     if max_to_open == 0:
         for valve in valve_map.values():
             if valve.flow_rate > 0:
@@ -250,6 +252,8 @@ def find_max_flow_elephant(
     for v in path2:
         flow_at_time2 += valve_map[v].flow_rate
 
+    # Find valid adjacent valves to each of the currnt valve. An adjacent valve is valid if it's not already
+    # visited and it can be reached before time runs out
     valid_adj1 = [
         v
         for v, d in valve1.dist.items()
@@ -261,22 +265,29 @@ def find_max_flow_elephant(
         if v not in path1 + [valve1.name] and v not in path2 + [valve2.name] and d < max_time - time2
     ]
 
+    # If there are no valid adjacent valves calculate the flow from the open valves through max_time
     if not valid_adj1 and not valid_adj2:
         m = (flow_at_time1 + valve1.flow_rate) * (max_time - time1) + (flow_at_time2 + valve2.flow_rate) * (
             max_time - time2
         )
-        global MAX
-        global IT
-        if total + m > MAX:
-            MAX = total + m
-        IT = IT + 1
-        if IT % 10000 == 0:
-            print(time1, time2, total + m, MAX)
+        ## Debugging: Show partial results
+        # global MAX
+        # global IT
+        # if total + m > MAX:
+        #     MAX = total + m
+        # IT = IT + 1
+        # if IT % 10000 == 0:
+        #     print(time1, time2, total + m, MAX)
         return total + m
 
+    # Handle special case where one valid adjacency list is a singleton that is already in the other list
     if len(valid_adj1) == 1 and valid_adj1[0] in valid_adj2:
         valid_adj2.remove(valid_adj1[0])
 
+    if len(valid_adj2) == 1 and valid_adj2[0] in valid_adj1:
+        valid_adj1.remove(valid_adj1[0])
+
+    # If there are no valid moves for player 1, keep player 1 fixed and move player 2
     if not valid_adj1:
         m = max(
             [
@@ -296,6 +307,7 @@ def find_max_flow_elephant(
         )
         return m
 
+    # If there are no valid moves for player 2, keep player 2 fixed and move player 1
     if not valid_adj2:
         m = max(
             [
@@ -315,6 +327,8 @@ def find_max_flow_elephant(
         )
         return m
 
+    # Try all combinations of moves for player 1 and player 2, avoiding the case where they move
+    # to the same node
     m = max(
         [
             find_max_flow_elephant(
@@ -332,7 +346,7 @@ def find_max_flow_elephant(
             )
             for v1 in valid_adj1
             for v2 in valid_adj2
-            if v1 != v2
+            if v1 != v2  # Don't visit the same node with both players
         ]
     )
     return m
