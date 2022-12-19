@@ -149,7 +149,7 @@ Work out the steps to release the most pressure in 30 minutes. What is the most 
 import heapq
 import re
 from enum import Enum
-from typing import Dict, List, Union
+from typing import Dict, Iterable, List, Union
 
 
 class ValveState(Enum):
@@ -163,6 +163,18 @@ class Valve:
         self.name = name
         self.flow_rate = flow_rate
         self.adjacent = adjacent
+        self.dist: Dict[str, int] = dict()
+        self.open_time = 10000
+
+    def set_distances(self, dist_map: Dict[str, int]):
+        for key, val in dist_map.items():
+            start, end = key.split(",")
+            if start == self.name and end != self.name and end != "AA":
+                self.dist[end] = val
+
+    def open(self, time):
+        self.state = ValveState.OPEN
+        self.open_time = time
 
     @classmethod
     def from_input_line(cls, input_line: str) -> "Valve":
@@ -189,72 +201,175 @@ def make_valves(input_lines: List[str]) -> Dict[str, Valve]:
     for line in input_lines:
         v = Valve.from_input_line(line)
         valve_map[v.name] = v
+
+    valves = valve_map.values()
+    non_zero_valves = [v.name for v in valves if v.flow_rate > 0]
+    non_zero_valves.append("AA")
+
+    dist = shortest_path_all(valve_map.values())
+    dist_nonzero = {}
+    for v in non_zero_valves:
+        for w in non_zero_valves:
+            dist_nonzero[f"{v},{w}"] = dist[f"{v},{w}"]
+            dist_nonzero[f"{w},{v}"] = dist[f"{w},{v}"]
+
+    for v in non_zero_valves:
+        valve = valve_map[v]
+        valve.set_distances(dist_nonzero)
     return valve_map
 
 
-def find_max_flow(valve_map: Dict[str, Valve], max_iterations=20000000):
-    # import pdb
+def find_max_flow_elephant(
+    valve1: Valve, valve2: Valve, valve_map: Dict[str, Valve], time1=0, time2=0, max_time=26, path1=None, path2=None
+) -> int:
+    if path1 is None:
+        path1 = []
+    if path2 is None:
+        path2 = []
 
-    # pdb.set_trace()
-    h = []
-    heapq.heappush(h, (0, 0, 0, "AA", []))
-    open_valves_at_max = []
-    max_state = 0
-    i = 0
-    seen = set()
-    while True:
-        i += 1
-        key, flow, time, valve_name, open_valves = heapq.heappop(h)
-        if i > max_iterations:
-            print("Size of heap:", len(h))
-            print("Time:", time)
-            return max_state
-            # return -1 * flow
-        if time > 30:
-            continue
-        if time == 30:
-            print("Iterations:", i)
-            print(len(h))
-            # return -1 * flow
+    flow_at_time1 = 0
+    for v in path1:
+        flow_at_time1 += valve_map[v].flow_rate
 
-            print(max_state)
-            if flow < max_state:
-                max_state = flow
-                open_valves_at_max = open_valves
-        valve = valve_map[valve_name]
-        flow_at_time = sum([valve_map[v_name].flow_rate for v_name in open_valves])
-        if (flow_at_time, time, valve_name, ",".join(open_valves)) in seen:
-            continue
-        if time > 10 and flow_at_time == 0:
-            continue
-        # print(key, flow_at_time, time, valve_name, ",".join(list(sorted(list(open_valves)))))
+    flow_at_time2 = 0
+    for v in path2:
+        flow_at_time2 += valve_map[v].flow_rate
 
-        seen.add((flow_at_time, time, valve_name, ",".join(open_valves)))
-        # print(flow_at_time)
-        if valve_name not in open_valves and valve.flow_rate > 0:
-            new_open_valves = open_valves.copy()
-            new_open_valves.append(valve_name)
-            heapq.heappush(
-                h,
-                (
-                    (time + 1, -1 * flow_at_time),
-                    flow - flow_at_time,
-                    time + 1,
-                    valve_name,
-                    new_open_valves,
-                ),
+    # if path1 == ["AA", "JJ", "BB"] and path2 == ["AA", "DD", "HH"]:
+    #     import pdb
+
+    #     pdb.set_trace()
+    #     print(time1, time2, (valve1.name, valve2.name), flow_at_time1, flow_at_time2, path1, path2)
+    # print(time1, time2, (valve1.name, valve2.name), flow_at_time1, flow_at_time2, path1, path2)
+    valid_adj1 = [
+        (v, d)
+        for v, d in valve1.dist.items()
+        if v not in path1 + [valve1.name] and v not in path2 + [valve2.name] and d < max_time - time1
+    ]
+    valid_adj2 = [
+        (v, d)
+        for v, d in valve2.dist.items()
+        if v not in path1 + [valve1.name] and v not in path2 + [valve2.name] and d < max_time - time2
+    ]
+
+    if not valid_adj1 and not valid_adj2:
+        m = (flow_at_time1 + valve1.flow_rate) * (max_time - time1) + (flow_at_time2 + valve2.flow_rate) * (
+            max_time - time2
+        )
+        return m
+
+    if len(valid_adj1) == 1 and valid_adj1[0] in valid_adj2:
+        valid_adj2.remove(valid_adj1[0])
+
+    if not valid_adj1:
+        m = max(
+            [
+                (flow_at_time2 + valve2.flow_rate) * (d2 + 1)
+                + find_max_flow_elephant(
+                    valve1,
+                    valve_map[v2],
+                    valve_map,
+                    time1,
+                    time2 + d2 + 1,
+                    path1=path1,
+                    path2=path2 + [valve2.name],
+                )
+                for v2, d2 in valid_adj2
+            ]
+        )
+        return m
+
+    if not valid_adj2:
+        m = max(
+            [
+                (flow_at_time1 + valve1.flow_rate) * (d1 + 1)
+                + find_max_flow_elephant(
+                    valve_map[v1],
+                    valve2,
+                    valve_map,
+                    time1 + d1 + 1,
+                    time2,
+                    path1=path1 + [valve1.name],
+                    path2=path2,
+                )
+                for v1, d1 in valid_adj1
+            ]
+        )
+        return m
+
+    m = max(
+        [
+            (flow_at_time1 + valve1.flow_rate) * (d1 + 1)
+            + (flow_at_time2 + valve2.flow_rate) * (d2 + 1)
+            + find_max_flow_elephant(
+                valve_map[v1],
+                valve_map[v2],
+                valve_map,
+                time1 + d1 + 1,
+                time2 + d2 + 1,
+                path1=path1 + [valve1.name],
+                path2=path2 + [valve2.name],
             )
-        for other_valve_name in valve.adjacent:
-            heapq.heappush(
-                h,
-                (
-                    (time + 1, -1 * flow_at_time),
-                    flow - flow_at_time,
-                    time + 1,
-                    other_valve_name,
-                    open_valves.copy(),
-                ),
-            )
+            for v1, d1 in valid_adj1
+            for v2, d2 in valid_adj2
+        ]
+    )
+    return m
+
+
+def find_max_flow(valve: Valve, valve_map: Dict[str, Valve], time=0, max_time=30, path=None) -> int:
+    if path is None:
+        path = []
+    if time > max_time:
+        import pdb
+
+        pdb.set_trace()
+        return 0
+    flow_at_time = 0
+    for v in path:
+        flow_at_time += valve_map[v].flow_rate
+    valid_adj = [v for v, d in valve.dist.items() if v not in path and d < max_time - time]
+    if not valid_adj:
+        return (flow_at_time + valve.flow_rate) * (max_time - time)
+    m = max(
+        [
+            (flow_at_time + valve.flow_rate) * (d + 1)
+            + find_max_flow(valve_map[v], valve_map, time + d + 1, path=path + [valve.name])
+            for v, d in valve.dist.items()
+            if v not in path and d < max_time - time
+        ]
+    )
+    return m
+
+
+def shortest_path_all(valves: Iterable[Valve]):
+    dist = {}
+    for valve1 in valves:
+        for valve2 in valves:
+            if valve1.name == valve2.name:
+                dist[f"{valve1.name},{valve2.name}"] = 0
+            else:
+                if valve2.name in valve1.adjacent:
+                    dist[f"{valve1.name},{valve2.name}"] = 1
+                    dist[f"{valve2.name},{valve1.name}"] = 1
+                else:
+                    dist[f"{valve1.name},{valve2.name}"] = 100000
+                    dist[f"{valve2.name},{valve1.name}"] = 100000
+
+    for valvek in valves:
+        for valvei in valves:
+            for valvej in valves:
+
+                # If vertex k is on the shortest path from
+                # i to j, then update the value of dist[i][j]
+                dist[f"{valvei.name},{valvej.name}"] = min(
+                    dist[f"{valvei.name},{valvej.name}"],
+                    dist[f"{valvei.name},{valvek.name}"] + dist[f"{valvek.name},{valvej.name}"],
+                )
+                dist[f"{valvej.name},{valvei.name}"] = dist[f"{valvei.name},{valvej.name}"]
+    return dist
+
+
 
 
 SAMPLE_INPUT = """
@@ -273,8 +388,18 @@ Valve JJ has flow rate=21; tunnel leads to valve II"""
 def test_sample_part1():
     lines = parse_input(SAMPLE_INPUT)
     valve_map = make_valves(lines)
-    max_flow = find_max_flow(valve_map)
+    print(shortest_path_all(valve_map.values()))
+
+    # max_flow = random_walk(valve_map, 1)
+    max_flow = find_max_flow(valve_map["AA"], valve_map)
     assert max_flow == 1651
+
+
+def test_sample_part2():
+    lines = parse_input(SAMPLE_INPUT)
+    valve_map = make_valves(lines)
+    max_flow = find_max_flow_elephant(valve_map["AA"], valve_map["AA"], valve_map)
+    assert max_flow == 1707
 
 
 def parse_input(text: str) -> List[str]:
@@ -288,8 +413,15 @@ def main():
         input_text = file_in.read()
     lines = parse_input(input_text)
     valve_map = make_valves(lines)
-    max_flow = find_max_flow(valve_map)
-    print("Part 1:", max_flow)
+    valves = valve_map.values()
+
+    # max_flow = random_walk(valve_map, max_iterations=1000000)
+    # max_flow = find_max_flow(valve_map["AA"], valve_map)
+    # print("Part 1:", max_flow)
+
+    # max_flow = random_walk(valve_map, num_movers=2, max_time=26, max_iterations=5000000)
+    max_flow = find_max_flow_elephant(valve_map["AA"], valve_map["AA"], valve_map)
+    print("Part 2:", max_flow)
 
 
 if __name__ == "__main__":
