@@ -145,7 +145,7 @@ def count_non_interior_exposed_sides(cube_set: Set[Cube]) -> int:
                         known_exterior = known_exterior.union(visited_set)
                         exposed_ct += 1
                     else:
-                        # Any cubes visited while searching from this cube are also exterior cubes
+                        # Any cubes visited while searching from this cube are also interior cubes
                         # so keep track of them to avoid unnecessary additional searches
                         known_interior = known_interior.union(visited_set)
 
