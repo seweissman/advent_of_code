@@ -660,7 +660,7 @@ def test_part2():
     chamber = Chamber(jet_pattern)
     chamber.run_drops(n=50)
     h = chamber.max_height
-    print("Height at 27:", h)
+    print("Height at 50:", h)
 
     #  rocks_dropped, h, max_height, max_height - max_height_at_last_reset, last_shape
 
