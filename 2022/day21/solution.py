@@ -40,6 +40,15 @@ This process continues until root yells a number: 152.
 
 However, your actual situation involves considerably more monkeys. What number will the monkey named root yell?
 
+--- Part Two ---
+Due to some kind of monkey-elephant-human mistranslation, you seem to have misunderstood a few key details about the riddle.
+
+First, you got the wrong job for the monkey named root; specifically, you got the wrong math operation. The correct operation for monkey root should be =, which means that it still listens for two numbers (from the same two monkeys as before), but now checks that the two numbers match.
+
+Second, you got the wrong monkey for the job starting with humn:. It isn't a monkey - it's you. Actually, you got the job wrong, too: you need to figure out what number you need to yell so that root's equality check passes. (The number that appears after humn: in your input is now irrelevant.)
+
+In the above example, the number you need to yell to pass root's equality test is 301. (This causes root to get the same number, 150, from both of its monkeys.)
+
 """
 
 import re
@@ -56,6 +65,25 @@ def proc_line(line):
     if not m:
         raise Exception(f"Couldn't parse {formula}")
     else:
+        return (monkey, [m.group(1), m.group(2)], formula)
+
+
+def proc_line_part2(line):
+    monkey, formula = line.split(": ")
+    if monkey == "humn":
+        return None
+    try:
+        int(formula)
+        return (monkey, [], formula)
+    except ValueError:
+        pass
+    m = re.match("([a-z]+).* [-+/*] ([a-z]+)", formula)
+    if not m:
+        raise Exception(f"Couldn't parse {formula}")
+    else:
+        if monkey == "root":
+            return (monkey, [m.group(1), m.group(2)], f"{m.group(1)} == {m.group(2)}")
+
         return (monkey, [m.group(1), m.group(2)], formula)
 
 
@@ -103,11 +131,74 @@ def find_monkey_values(lines):
     return int(monkey_vals["root"])
 
 
+def is_str_int(s: str) -> bool:
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+
+def simplify_monkey_values(lines):
+    monkey_vals = {}
+    monkeys = [proc_line_part2(line) for line in lines]
+    monkeys = [m for m in monkeys if m is not None]
+    for monkey in monkeys:
+        name, dependencies, formula = monkey
+        monkey_vals[name] = (set(dependencies), formula)
+
+    changed = True
+    while changed:
+        changed = False
+        for name, (dependencies, formula) in monkey_vals.items():
+            formula_new = formula
+            dependencies_new = set()
+            for dep_name in dependencies:
+                if dep_name in monkey_vals:
+                    dep_dependencies, dep_formula = monkey_vals[dep_name]
+                    for dep_dependency in dep_dependencies:
+                        dependencies_new.add(dep_dependency)
+
+                    if is_str_int(dep_formula):
+                        formula_new = formula_new.replace(dep_name, f"{dep_formula}")
+                    else:
+                        formula_new = formula_new.replace(dep_name, f"({dep_formula})")
+                else:
+                    dependencies_new.add(dep_name)
+            if formula != formula_new:
+                # print("updated formula:", formula, formula_new)
+                monkey_vals[name] = (dependencies_new, formula_new)
+                changed = True
+        # print("Changed:", monkey_vals)
+    # print(monkey_vals)
+
+    return monkey_vals["root"]
+
+
 def test_part1():
     lines = parse_input(SAMPLE_INPUT)
     root_val = find_monkey_values(lines)
     assert root_val == 152
 
+
+def test_part2():
+    lines = parse_input(SAMPLE_INPUT)
+    root_formula = simplify_monkey_values(lines)
+    formula = simplify_formula(root_formula[1])
+    print("Simplified: ", formula)
+    # ((4 + (2 * (humn - 3))) / 4) == 150
+    # human = 301
+
+
+def simplify_formula(formula: str) -> str:
+    changed = True
+    while changed:
+        changed = False
+        m = re.match(r".*(\(-?\d+ [-+/*] -?\d+\)).*", formula)
+        if m:
+            formula = formula.replace(m.group(1), str(int(eval(m.group(1)))))
+            changed = True
+    return formula
 
 def main():
     with open("input.txt", encoding="utf8") as file_in:
@@ -115,6 +206,20 @@ def main():
     input_lines = parse_input(input_text)
     root_val = find_monkey_values(input_lines)
     print("Part 1:", root_val)
+
+    root_formula = simplify_monkey_values(input_lines)
+    formula = simplify_formula(root_formula[1])
+    print("Simplified: ", formula)
+
+    # Do the rest manually
+    """
+((452 + ((88019559115041 - ((((((541 + (((((4 * ((((((((2 * (((((557 + ((996 + (((((261 + (2 * ((2 * (((980 + ((39 * (934 + ((((((((((191 + (6 * ((2 * (((((978 + (3 * (((((humn - 259) / 5) + 998) * 50) - 222))) / 12) + 442) / 2) - 274)) - 560))) + 105) / 2) - 556) * 2) + 65) + 773) / 2) - 791) / 9))) + 703)) / 9) - 848)) - 760))) + 658) / 3) - 888) * 4)) / 8)) / 2) - 436) * 11) + 798)) - 585) / 5) + 225) * 2) - 318) / 2) + 564)) - 998) / 3) - 362) / 4)) * 7) + 344) / 5) - 275) * 6)) / 3)) * 2)
+== 24376746909942
+==>
+humn 
+== (693940982052 - 998)*5 + 259
+
+    """
 
 
 if __name__ == "__main__":
