@@ -144,6 +144,7 @@ The final password is still calculated from your final position and facing from 
 Fold the map into a cube, then follow the path given in the monkeys' notes. What is the final password?
 """
 
+from collections import defaultdict, namedtuple
 from enum import Enum
 
 
@@ -153,6 +154,59 @@ class Direction(Enum):
     WEST = 2
     NORTH = 3
 
+
+QuadrantDirections = namedtuple("QuadrantDirections", ["north_to", "south_to", "west_to", "east_to"])
+
+DIR_MAP: dict[int, QuadrantDirections] = {}
+# 1
+qd1 = QuadrantDirections(
+    north_to=(2, Direction.SOUTH),
+    west_to=(3, Direction.SOUTH),
+    east_to=(6, Direction.WEST),
+    south_to=(4, Direction.SOUTH),
+)
+# 2
+qd2 = QuadrantDirections(
+    north_to=(1, Direction.SOUTH),
+    south_to=(5, Direction.NORTH),
+    east_to=(3, Direction.EAST),
+    west_to=(6, Direction.NORTH),
+)
+# 3
+qd3 = QuadrantDirections(
+    north_to=(1, Direction.EAST),
+    south_to=(5, Direction.EAST),
+    east_to=(4, Direction.EAST),
+    west_to=(2, Direction.WEST),
+)
+# 4
+qd4 = QuadrantDirections(
+    north_to=(1, Direction.NORTH),
+    south_to=(5, Direction.SOUTH),
+    east_to=(6, Direction.SOUTH),
+    west_to=(3, Direction.WEST),
+)
+# 5
+qd5 = QuadrantDirections(
+    north_to=(4, Direction.NORTH),
+    south_to=(2, Direction.NORTH),
+    east_to=(6, Direction.EAST),
+    west_to=(3, Direction.NORTH),
+)
+# 6
+qd6 = QuadrantDirections(
+    north_to=(4, Direction.WEST),
+    south_to=(2, Direction.EAST),
+    east_to=(1, Direction.WEST),
+    west_to=(5, Direction.WEST),
+)
+
+DIR_MAP[1] = qd1
+DIR_MAP[2] = qd2
+DIR_MAP[3] = qd3
+DIR_MAP[4] = qd4
+DIR_MAP[5] = qd5
+DIR_MAP[6] = qd6
 
 def test_turn():
     grid, _ = read_grid(SAMPLE_INPUT)
@@ -196,74 +250,66 @@ def test_next_direction():
 
 class Grid:
 
-    def __init__(self, grid):
+    def __init__(self, grid: dict[int, dict[int, str]]):
         self.row = 0
         self.direction = Direction.NORTH
-        self.run_index = 0
         self.col = 0
-        self.grid = grid
+        self.row_grid = grid
+        self.col_grid: dict[int, dict[int, str]] = {}
+        for row, col_dict in self.row_grid.items():
+            for col, val in col_dict.items():
+                if col not in self.col_grid:
+                    self.col_grid[col] = {}
+                self.col_grid[col][row] = val
+
         self.col_min = {}
         self.col_max = {}
         self.col_bounds = {}
-        self.col = self.grid[0][0][1]
+        self.col = min(self.row_grid[0].keys())
 
     def _get_col_min(self):
-        col = self.col  # get_col()
-        if col in self.col_min:
-            return self.col_min[col]
-        row = 0
-        while row < len(self.grid):
-            for run in self.grid[row]:
-                if run[0] in [".", "#"] and run[1] <= col < run[1] + run[2]:
-                    return row
-            row += 1
-        self.col_min[col] = row
-        return row
+        return min(self.row_grid[self.row].keys())
 
     def _get_col_max(self):
-        col = self.get_col()
-        if col in self.col_max:
-            return self.col_max[col]
-        row = len(self.grid) - 1
-        while row > 0:
-            for run in self.grid[row]:
-                if run[0] in [".", "#"] and run[1] <= col < run[1] + run[2]:
-                    return row
-            row -= 1
-        self.col_max[col] = row
-        return row
+        return max(self.row_grid[self.row].keys())
 
-    def get_run_index(self):
-        return self.run_index
+    def _get_row_min(self):
+        return min(self.col_grid[self.col].keys())
 
-    def set_run_index(self, v: int):
-        self.run_index = v % len(self.grid[self.row])
+    def _get_row_max(self):
+        return max(self.col_grid[self.col].keys())
 
     def get_col(self):
         return self.col
 
-    def set_col(self, v: int):
-        first_run = self.grid[self.row][0]
-        last_run = self.grid[self.row][-1]
-        row_min = first_run[1]
-        row_max = last_run[1] + last_run[2] - 1
-        self.col = (v - row_min) % (row_max - row_min + 1) + row_min
+    def step_row(self, backwards=False):
+        direction = self.direction
+        if backwards:
+            direction = Direction((self.direction.value + 2) % 4)
+
+        if direction == Direction.SOUTH:
+            v = self.row + 1
+        else:
+            v = self.row - 1
+        row_min = self._get_row_min()
+        row_max = self._get_row_max()
+        self.row = (v - row_min) % (row_max - row_min + 1) + row_min
 
     def get_row(self):
         return self.row
 
-    def set_row(self, v: int):
+    def step_col(self, backwards=False):
+        direction = self.direction
+        if backwards:
+            direction = Direction((self.direction.value + 2) % 4)
+
+        if direction == Direction.EAST:
+            v = self.col + 1
+        else:
+            v = self.col - 1
         col_min = self._get_col_min()
         col_max = self._get_col_max()
-        self.row = (v - col_min) % (col_max - col_min + 1) + col_min
-
-    def _reset_run_index(self):
-        self.run_index = 0
-        while True:
-            run = self.grid[self.get_row()][self.get_run_index()]
-            if run[1] <= self.get_col() < run[1] + run[2]:
-                break
-            self.set_run_index(self.run_index + 1)
+        self.col = (v - col_min) % (col_max - col_min + 1) + col_min
 
     def turn(self, letter: str):
         if letter == "L":
@@ -274,100 +320,217 @@ class Grid:
     def walk(self, letter: str, steps: int):
         self.turn(letter)
         print(self.direction, letter, steps, self.row, self.col)
-        # if grid.row == 1 and grid.col == 99:
+        # if self.row == 5 and self.col == 6:
         #     import pdb
 
         #     pdb.set_trace()
-        if self.direction == Direction.SOUTH:
-            self.walk_down(steps)
-        elif self.direction == Direction.NORTH:
-            self.walk_up(steps)
-        elif self.direction == Direction.EAST:
-            self.walk_right(steps)
-        else:
-            self.walk_left(steps)
-
-    def walk_right(self, steps: int):
         while steps > 0:
-            run = self.grid[self.get_row()][self.get_run_index()]
-            if run[0] == ".":
-                steps_to_take = min(steps, run[2] - self.get_col() + run[1])
-                self.set_col(self.col + steps_to_take)
-                steps -= steps_to_take
-            elif run[0] == "#":
+            if self.direction in [Direction.EAST, Direction.WEST]:
+                self.step_col()
+            else:
+                self.step_row()
+            if self.row_grid[self.row][self.col] == "#":
+                if self.direction in [Direction.EAST, Direction.WEST]:
+                    self.step_col(backwards=True)
+                else:
+                    self.step_row(backwards=True)
                 break
-            self.set_run_index(self.get_run_index() + 1)
-        run = self.grid[self.get_row()][self.get_run_index()]
-        if run[0] == "#" and run[1] <= self.get_col() < run[1] + run[2]:
-            self.set_run_index(self.get_run_index() - 1)
-            self.set_col(self.col - 1)
-
-    def walk_left(self, steps: int):
-        while steps > 0:
-            run = self.grid[self.get_row()][self.get_run_index()]
-            if run[0] == ".":
-                steps_to_take = min(steps, self.get_col() - run[1] + 1)
-                steps = steps - steps_to_take
-                self.set_col(self.get_col() - steps_to_take)
-            elif run[0] == "#":
-                break
-            self.set_run_index(self.get_run_index() - 1)
-        run = self.grid[self.get_row()][self.get_run_index()]
-        if run[0] == "#" and run[1] <= self.get_col() < run[1] + run[2]:
-            self.set_run_index(self.get_run_index() + 1)
-            self.set_col(self.col + 1)
-
-    def walk_down(self, steps: int):
-        while steps > 0:
-            self.set_row(self.get_row() + 1)
-            self.run_index = 0
-            while True:
-                run = self.grid[self.get_row()][self.get_run_index()]
-                if run[1] <= self.get_col() < run[1] + run[2]:
-                    break
-                self.set_run_index(self.run_index + 1)
-            run = self.grid[self.get_row()][self.get_run_index()]
-            if run[0] == ".":
-                steps -= 1
-            elif run[0] == "#":
-                break
-        run = self.grid[self.get_row()][self.get_run_index()]
-        if run[0] == "#" and run[1] <= self.get_col() < run[1] + run[2]:
-            self.set_row(self.get_row() - 1)
-            self._reset_run_index()
-
-    def walk_up(self, steps: int):
-        while steps > 0:
-            self.set_row(self.get_row() - 1)
-            self.run_index = 0
-            while True:
-                run = self.grid[self.get_row()][self.get_run_index()]
-                if run[1] <= self.get_col() < run[1] + run[2]:
-                    break
-                self.set_run_index(self.run_index + 1)
-            run = self.grid[self.get_row()][self.get_run_index()]
-            if run[0] == ".":
-                steps -= 1
-            elif run[0] == "#":
-                break
-        run = self.grid[self.get_row()][self.get_run_index()]
-        if run[0] == "#" and run[1] <= self.get_col() < run[1] + run[2]:
-            self.set_row(self.get_row() + 1)
-            self._reset_run_index()
-
+            steps -= 1
 
 class Cube(Grid):
-    def set_col(self, v: int):
+    def __init__(self, grid, size):
+        super().__init__(grid)
+        self.quadrant = 1
+        self.size = size
+
+    def move_quadrant(self, direction: Direction, backwards=False):
+        q_dirs = DIR_MAP[self.quadrant]
+        if direction == Direction.EAST:
+            new_quadrant, new_direction = q_dirs.east_to
+        elif direction == Direction.WEST:
+            new_quadrant, new_direction = q_dirs.west_to
+        elif direction == Direction.NORTH:
+            new_quadrant, new_direction = q_dirs.north_to
+        else:
+            new_quadrant, new_direction = q_dirs.south_to
+
+        if not backwards:
+            self.direction = new_direction
+        else:
+            self.direction = Direction((new_direction.value + 2) % 4)
+
+        if self.quadrant == 1:
+            if new_quadrant == 2:
+                self.row = self.size
+                self.col = self.col - 2 * self.size
+            if new_quadrant == 3:
+                self.col = self.size + self.row
+                self.row = self.size
+            if new_quadrant == 4:
+                self.row = self.size
+                # self.col stays the same
+            if new_quadrant == 6:
+                self.row = 3 * self.size - self.row - 1
+                self.col = 4 * self.size - 1
+        elif self.quadrant == 2:
+            if new_quadrant == 1:
+                self.row = 0
+                self.col = 3 * self.size - self.col - 1
+            if new_quadrant == 3:
+                self.col = self.size
+                # self.row stays the same
+            if new_quadrant == 5:
+                self.row = 3 * self.size - 1
+                self.col = 3 * self.size - self.col - 1
+            if new_quadrant == 6:
+                self.col = 3 * self.size - self.row - 1
+                self.row = 3 * self.size
+        elif self.quadrant == 3:
+            if new_quadrant == 2:
+                # self.row stays the same
+                self.col = self.size - 1
+            if new_quadrant == 4:
+                # self.row stays the same
+                self.col = 2 * self.size
+            if new_quadrant == 1:
+                self.row = self.col - self.size
+                self.col = 2 * self.size
+            if new_quadrant == 5:
+                self.row = 3 * self.size - self.row - 1
+                self.col = 2 * self.size
+        elif self.quadrant == 4:
+            if new_quadrant == 1:
+                self.row = self.size - 1
+                # self.col stays the same
+            if new_quadrant == 3:
+                self.col = 2 * self.size - 1
+                # self.row stays the same
+            if new_quadrant == 5:
+                self.row = 2 * self.size
+                # self.col stays the same
+            if new_quadrant == 6:
+                self.col = 5 * self.size - self.row - 1
+                self.row = 2 * self.size
+        elif self.quadrant == 5:
+            if new_quadrant == 4:
+                self.row = 2 * self.size - 1
+                # self.col stays the same
+            if new_quadrant == 6:
+                self.col = 3 * self.size
+                # self.row stays the same
+            if new_quadrant == 3:
+                self.col = 4 * self.size - self.row - 1
+                self.row = 2 * self.size
+            if new_quadrant == 2:
+                self.row = 2 * self.size - 1
+                self.col = 3 * self.size - self.col - 1
+        else:  # if self.quadrant == 6:
+            if new_quadrant == 5:
+                # self.row stays the same
+                self.col = 3 * self.size - 1
+            if new_quadrant == 4:
+                self.row = 4 * self.size - self.col - 1
+                self.col = 3 * self.size - 1
+            if new_quadrant == 1:
+                self.row = 3 * self.size - self.row - 1
+                self.col = 3 * self.size - 1
+            if new_quadrant == 2:
+                self.row = 3 * self.size - self.col - 1
+                self.col = 0
+        self.quadrant = new_quadrant
+
+    def _get_col_min(self):
+        if self.quadrant == 1:
+            return 2 * self.size
+        if self.quadrant == 2:
+            return 0
+        if self.quadrant == 3:
+            return self.size
+        if self.quadrant == 4:
+            return 2 * self.size
+        if self.quadrant == 5:
+            return 2 * self.size
+        # if self.quadrant == 6:
+        return 3 * self.size
+
+    def _get_col_max(self):
+        if self.quadrant == 1:
+            return 3 * self.size - 1
+        if self.quadrant == 2:
+            return self.size - 1
+        if self.quadrant == 3:
+            return 2 * self.size - 1
+        if self.quadrant == 4:
+            return 3 * self.size - 1
+        if self.quadrant == 5:
+            return 3 * self.size - 1
+        # if self.quadrant == 6:
+        return 4 * self.size - 1
+
+    def _get_row_min(self):
+        if self.quadrant == 1:
+            return 0
+        if self.quadrant == 2:
+            return self.size
+        if self.quadrant == 3:
+            return self.size
+        if self.quadrant == 4:
+            return self.size
+        if self.quadrant == 5:
+            return 2 * self.size
+        # if self.quadrant == 6:
+        return 2 * self.size
+
+    def _get_row_max(self):
+        if self.quadrant == 1:
+            return self.size - 1
+        if self.quadrant == 2:
+            return 2 * self.size - 1
+        if self.quadrant == 3:
+            return 2 * self.size - 1
+        if self.quadrant == 4:
+            return 2 * self.size - 1
+        if self.quadrant == 5:
+            return 3 * self.size - 1
+        # if self.quadrant == 6:
+        return 3 * self.size - 1
+
+    def step_col(self, backwards=False):
         col_min = self._get_col_min()
         col_max = self._get_col_max()
+        direction = self.direction
+        if backwards:
+            direction = Direction((self.direction.value + 2) % 4)
 
-    def set_row(self, v: int):
-        first_run = self.grid[self.row][0]
-        last_run = self.grid[self.row][-1]
-        row_min = first_run[1]
-        row_max = last_run[1] + last_run[2] - 1
+        if direction == Direction.WEST:
+            if self.col == col_min:
+                self.move_quadrant(Direction.WEST, backwards=backwards)
+            else:
+                self.col -= 1
+        elif direction == Direction.EAST:
+            if self.col == col_max:
+                self.move_quadrant(Direction.EAST, backwards=backwards)
+            else:
+                self.col += 1
 
-    pass
+    def step_row(self, backwards=False):
+        row_min = self._get_row_min()
+        row_max = self._get_row_max()
+
+        direction = self.direction
+        if backwards:
+            direction = Direction((self.direction.value + 2) % 4)
+
+        if direction == Direction.NORTH:
+            if self.row == row_min:
+                self.move_quadrant(Direction.NORTH)
+            else:
+                self.row -= 1
+        elif direction == Direction.SOUTH:
+            if self.row == row_max:
+                self.move_quadrant(Direction.SOUTH)
+            else:
+                self.row += 1
 
 
 def walk_grid(grid: Grid, path):
@@ -377,37 +540,29 @@ def walk_grid(grid: Grid, path):
         grid.walk(turn_letter, steps)
 
 
-def test_walk_grid():
+def test_walk_grid_part1():
     grid, path = read_grid(SAMPLE_INPUT)
     walk_grid(grid, path)
     score = 1000 * (grid.row + 1) + 4 * (grid.col + 1) + grid.direction.value
     assert score == 6032
 
 
-def read_grid_lines(lines: list[str]) -> list[list[tuple[str, int, int]]]:
-    grid = []
-    for line in lines:
-        grid_row = []
-        curr_c = None
-        c_ct = 0
-        c_start = 0
-        for c in line:
-            if curr_c is None:
-                curr_c = c
-            if c == curr_c:
-                c_ct += 1
-            else:
-                run = (curr_c, c_start, c_ct)
-                if curr_c in [".", "#"]:
-                    grid_row.append(run)
-                c_start = c_start + c_ct
-                c_ct = 0
-                curr_c = c
-                c_ct += 1
-        run = (curr_c, c_start, c_ct)
-        if curr_c in [".", "#"]:
-            grid_row.append(run)
-        grid.append(grid_row)
+def test_walk_grid_part2():
+    cube, path = read_cube(SAMPLE_INPUT)
+    walk_grid(cube, path)
+    print("Last facing:", cube.direction)
+    score = 1000 * (cube.row + 1) + 4 * (cube.col + 1) + cube.direction.value
+    assert score == 5031
+
+
+def read_grid_lines(lines: list[str]) -> dict[int, dict[int, str]]:
+    grid = {}
+    for row, line in enumerate(lines):
+        grid[row] = {}
+        col = 0
+        for col, c in enumerate(line):
+            if c in [".", "#"]:
+                grid[row][col] = c
     return grid
 
 
@@ -415,9 +570,19 @@ def read_grid(input_str: str) -> tuple[Grid, str]:
     input_lines = parse_input(input_str)
     lines = input_lines[0 : len(input_lines) - 1]
     path = "R" + input_lines[-1]
-    grid_rows = read_grid_lines(lines)
-    grid = Grid(grid_rows)
+    grid_dict = read_grid_lines(lines)
+    grid = Grid(grid_dict)
     return grid, path
+
+
+def read_cube(input_str: str, size=4) -> tuple[Cube, str]:
+    input_lines = parse_input(input_str)
+    lines = input_lines[0 : len(input_lines) - 1]
+    path = "R" + input_lines[-1]
+    grid_rows = read_grid_lines(lines)
+    grid = Cube(grid_rows, size)
+    return grid, path
+
 
 SAMPLE_INPUT = """
         ...#
@@ -444,11 +609,11 @@ def test_walk_grid2():
     assert grid.col == 4
 
 
-def test_read_grid_lines():
-    input_lines = parse_input(SAMPLE_INPUT)
-    grid_lines = input_lines[0 : len(input_lines) - 1]
-    grid = read_grid_lines(grid_lines)
-    assert grid[0] == [(".", 8, 3), ("#", 11, 1)]
+# def test_read_grid_lines():
+#     input_lines = parse_input(SAMPLE_INPUT)
+#     grid_lines = input_lines[0 : len(input_lines) - 1]
+#     grid = read_grid_lines(grid_lines)
+#     assert grid[0] == [(".", 8, 3), ("#", 11, 1)]
 
 
 def parse_input(text: str) -> list[str]:
@@ -460,10 +625,16 @@ def parse_input(text: str) -> list[str]:
 def main():
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
-    grid = read_grid(input_text)
-    walk_grid(grid)
-    score = 1000 * (grid.row + 1) + 4 * (grid.col + 1) + grid.direction.value
-    print("Part 1:", score)
+    # grid, path = read_grid(input_text)
+    # walk_grid(grid, path)
+    # score = 1000 * (grid.row + 1) + 4 * (grid.col + 1) + grid.direction.value
+    # print("Part 1:", score)
+
+    # part 2
+    cube, path = read_cube(input_text)
+    walk_grid(cube, path)
+    score = 1000 * (cube.row + 1) + 4 * (cube.col + 1) + cube.direction.value
+    print("Part 2:", score)
 
 
 if __name__ == "__main__":
