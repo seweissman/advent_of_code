@@ -191,8 +191,8 @@ QuadrantDirections = namedtuple(
 )
 
 
-def make_sample_dir_map():
-    sample_dir_map: dict[int, QuadrantDirections] = {}
+def make_sample_dir_map() -> dict[int, QuadrantDirections]:
+    sample_dir_map = {}
     # 1
     qd1 = QuadrantDirections(
         north_to=(2, Direction.SOUTH, lambda row, col, size: (0, size - col - 1)),
@@ -257,8 +257,8 @@ def make_sample_dir_map():
     return sample_dir_map
 
 
-def make_input_dir_map():
-    input_dir_map: dict[int, QuadrantDirections] = {}
+def make_input_dir_map() -> dict[int, QuadrantDirections]:
+    input_dir_map = {}
     # 1
     qd1 = QuadrantDirections(
         north_to=(2, Direction.NORTH, lambda row, col, size: (size - 1, col)),
@@ -342,7 +342,7 @@ def test_input_quadrants():
     print(grid.row, grid.col, grid.quadrant)
 
 
-def next_direction(path_str: str):
+def next_direction(path_str: str) -> tuple[str, int, str]:
     dir_str = path_str[0]
     steps_str = ""
     i = 0
@@ -399,7 +399,7 @@ class Grid:
             v = self.row - 1
         self.row = (v - row_min) % (row_max - row_min + 1) + row_min
 
-    def get_grid_value(self):
+    def get_grid_value(self) -> str:
         return self.row_grid[self.row][self.col]
 
     def step_col(self, backwards=False):
@@ -440,11 +440,11 @@ class Cube(Grid):
         self.col = 0
         self.dir_map = dir_map
 
-    def get_grid_value(self):
+    def get_grid_value(self) -> str:
         quad = self.dir_map[self.quadrant]
         return self.row_grid[quad.row + self.row][quad.col + self.col]
 
-    def _move_quadrant(self, direction: Direction, backwards=False):
+    def _move_quadrant(self, direction: Direction, backwards: bool = False):
         q_dirs = self.dir_map[self.quadrant]
         if direction == Direction.EAST:
             new_quadrant, new_direction, row_col_fn = q_dirs.east_to
@@ -465,7 +465,7 @@ class Cube(Grid):
         self.row = new_row
         self.col = new_col
 
-    def step_col(self, backwards=False):
+    def step_col(self, backwards: bool = False):
         col_min = 0
         col_max = self.size - 1
         direction = self.direction
@@ -483,7 +483,7 @@ class Cube(Grid):
             else:
                 self.col += 1
 
-    def step_row(self, backwards=False):
+    def step_row(self, backwards: bool = False):
         row_min = 0
         row_max = self.size - 1
 
@@ -503,7 +503,7 @@ class Cube(Grid):
                 self.row += 1
 
 
-def walk_grid(grid: Grid, path):
+def walk_grid(grid: Grid, path: str):
     while path:
         turn_letter, steps, path = next_direction(path)
         # print(turn_letter, steps)  # , path)
