@@ -154,6 +154,29 @@ class Direction(Enum):
     WEST = 2
     NORTH = 3
 
+    def reverse(self):
+        return Direction((self.value + 2) % 4)
+
+    def turn(self, letter: str):
+        if letter == "L":
+            return Direction((self.value - 1) % 4)
+
+        return Direction((self.value + 1) % 4)
+
+
+def test_reverse():
+    direction = Direction.EAST
+    assert direction.reverse() == Direction.WEST
+
+
+def test_turn():
+    direction = Direction.NORTH
+    assert direction.turn("L") == Direction.WEST
+    direction = Direction.SOUTH
+    assert direction.turn("R") == Direction.WEST
+    direction = Direction.EAST
+    assert direction.turn("R") == Direction.SOUTH
+
 
 QuadrantDirections = namedtuple(
     "QuadrantDirections",
@@ -317,20 +340,6 @@ def test_input_quadrants():
     grid.direction = Direction.SOUTH
     grid.walk("R", 3)
     print(grid.row, grid.col, grid.quadrant)
-    # assert grid.
-
-
-def test_turn():
-    grid, _ = read_grid(SAMPLE_INPUT)
-    assert grid.direction == Direction.NORTH
-    grid.turn("L")
-    assert grid.direction == Direction.WEST
-    grid.direction = Direction.SOUTH
-    grid.turn("R")
-    assert grid.direction == Direction.WEST
-    grid.direction = Direction.EAST
-    grid.turn("R")
-    assert grid.direction == Direction.SOUTH
 
 
 def next_direction(path_str: str):
@@ -376,61 +385,38 @@ class Grid:
 
         self.col = min(self.row_grid[0].keys())
 
-    def _get_col_min(self):
-        return min(self.row_grid[self.row].keys())
-
-    def _get_col_max(self):
-        return max(self.row_grid[self.row].keys())
-
-    def _get_row_min(self):
-        return min(self.col_grid[self.col].keys())
-
-    def _get_row_max(self):
-        return max(self.col_grid[self.col].keys())
-
-    def get_col(self):
-        return self.col
-
     def step_row(self, backwards=False):
+        row_min = min(self.col_grid[self.col].keys())
+        row_max = max(self.col_grid[self.col].keys())
+
         direction = self.direction
         if backwards:
-            direction = Direction((self.direction.value + 2) % 4)
+            direction = direction.reverse()
 
         if direction == Direction.SOUTH:
             v = self.row + 1
         else:
             v = self.row - 1
-        row_min = self._get_row_min()
-        row_max = self._get_row_max()
         self.row = (v - row_min) % (row_max - row_min + 1) + row_min
-
-    def get_row(self):
-        return self.row
 
     def get_grid_value(self):
         return self.row_grid[self.row][self.col]
 
     def step_col(self, backwards=False):
+        col_min = min(self.row_grid[self.row].keys())
+        col_max = max(self.row_grid[self.row].keys())
         direction = self.direction
         if backwards:
-            direction = Direction((self.direction.value + 2) % 4)
+            direction = direction.reverse()
 
         if direction == Direction.EAST:
             v = self.col + 1
         else:
             v = self.col - 1
-        col_min = self._get_col_min()
-        col_max = self._get_col_max()
         self.col = (v - col_min) % (col_max - col_min + 1) + col_min
 
-    def turn(self, letter: str):
-        if letter == "L":
-            self.direction = Direction((self.direction.value - 1) % 4)
-        else:
-            self.direction = Direction((self.direction.value + 1) % 4)
-
     def walk(self, letter: str, steps: int):
-        self.turn(letter)
+        self.direction = self.direction.turn(letter)
         # print(self.direction, letter, steps, self.row, self.col)  # , self.quadrant)
         while steps > 0:
             if self.direction in [Direction.EAST, Direction.WEST]:
@@ -458,7 +444,7 @@ class Cube(Grid):
         quad = self.dir_map[self.quadrant]
         return self.row_grid[quad.row + self.row][quad.col + self.col]
 
-    def move_quadrant(self, direction: Direction, backwards=False):
+    def _move_quadrant(self, direction: Direction, backwards=False):
         q_dirs = self.dir_map[self.quadrant]
         if direction == Direction.EAST:
             new_quadrant, new_direction, row_col_fn = q_dirs.east_to
@@ -472,59 +458,47 @@ class Cube(Grid):
         if not backwards:
             self.direction = new_direction
         else:
-            self.direction = Direction((new_direction.value + 2) % 4)
+            self.direction = new_direction.reverse()
 
         new_row, new_col = row_col_fn(self.row, self.col, self.size)
         self.quadrant = new_quadrant
         self.row = new_row
         self.col = new_col
 
-    def _get_col_min(self):
-        return 0
-
-    def _get_col_max(self):
-        return self.size - 1
-
-    def _get_row_min(self):
-        return 0
-
-    def _get_row_max(self):
-        return self.size - 1
-
     def step_col(self, backwards=False):
-        col_min = self._get_col_min()
-        col_max = self._get_col_max()
+        col_min = 0
+        col_max = self.size - 1
         direction = self.direction
         if backwards:
-            direction = Direction((self.direction.value + 2) % 4)
+            direction = direction.reverse()
 
         if direction == Direction.WEST:
             if self.col == col_min:
-                self.move_quadrant(Direction.WEST, backwards=backwards)
+                self._move_quadrant(Direction.WEST, backwards=backwards)
             else:
                 self.col -= 1
         elif direction == Direction.EAST:
             if self.col == col_max:
-                self.move_quadrant(Direction.EAST, backwards=backwards)
+                self._move_quadrant(Direction.EAST, backwards=backwards)
             else:
                 self.col += 1
 
     def step_row(self, backwards=False):
-        row_min = self._get_row_min()
-        row_max = self._get_row_max()
+        row_min = 0
+        row_max = self.size - 1
 
         direction = self.direction
         if backwards:
-            direction = Direction((self.direction.value + 2) % 4)
+            direction = direction.reverse()
 
         if direction == Direction.NORTH:
             if self.row == row_min:
-                self.move_quadrant(Direction.NORTH, backwards=backwards)
+                self._move_quadrant(Direction.NORTH, backwards=backwards)
             else:
                 self.row -= 1
         elif direction == Direction.SOUTH:
             if self.row == row_max:
-                self.move_quadrant(Direction.SOUTH, backwards=backwards)
+                self._move_quadrant(Direction.SOUTH, backwards=backwards)
             else:
                 self.row += 1
 
@@ -608,12 +582,6 @@ def test_walk_grid2():
     assert grid.row == 7
     assert grid.col == 4
 
-
-# def test_read_grid_lines():
-#     input_lines = parse_input(SAMPLE_INPUT)
-#     grid_lines = input_lines[0 : len(input_lines) - 1]
-#     grid = read_grid_lines(grid_lines)
-#     assert grid[0] == [(".", 8, 3), ("#", 11, 1)]
 
 
 def parse_input(text: str) -> list[str]:
