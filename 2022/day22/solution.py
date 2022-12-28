@@ -155,58 +155,170 @@ class Direction(Enum):
     NORTH = 3
 
 
-QuadrantDirections = namedtuple("QuadrantDirections", ["north_to", "south_to", "west_to", "east_to"])
-
-DIR_MAP: dict[int, QuadrantDirections] = {}
-# 1
-qd1 = QuadrantDirections(
-    north_to=(2, Direction.SOUTH),
-    west_to=(3, Direction.SOUTH),
-    east_to=(6, Direction.WEST),
-    south_to=(4, Direction.SOUTH),
-)
-# 2
-qd2 = QuadrantDirections(
-    north_to=(1, Direction.SOUTH),
-    south_to=(5, Direction.NORTH),
-    east_to=(3, Direction.EAST),
-    west_to=(6, Direction.NORTH),
-)
-# 3
-qd3 = QuadrantDirections(
-    north_to=(1, Direction.EAST),
-    south_to=(5, Direction.EAST),
-    east_to=(4, Direction.EAST),
-    west_to=(2, Direction.WEST),
-)
-# 4
-qd4 = QuadrantDirections(
-    north_to=(1, Direction.NORTH),
-    south_to=(5, Direction.SOUTH),
-    east_to=(6, Direction.SOUTH),
-    west_to=(3, Direction.WEST),
-)
-# 5
-qd5 = QuadrantDirections(
-    north_to=(4, Direction.NORTH),
-    south_to=(2, Direction.NORTH),
-    east_to=(6, Direction.EAST),
-    west_to=(3, Direction.NORTH),
-)
-# 6
-qd6 = QuadrantDirections(
-    north_to=(4, Direction.WEST),
-    south_to=(2, Direction.EAST),
-    east_to=(1, Direction.WEST),
-    west_to=(5, Direction.WEST),
+QuadrantDirections = namedtuple(
+    "QuadrantDirections",
+    [
+        "north_to",
+        "south_to",
+        "west_to",
+        "east_to",
+        "row",
+        "col",
+    ],
 )
 
-DIR_MAP[1] = qd1
-DIR_MAP[2] = qd2
-DIR_MAP[3] = qd3
-DIR_MAP[4] = qd4
-DIR_MAP[5] = qd5
-DIR_MAP[6] = qd6
+
+def make_sample_dir_map():
+    sample_dir_map: dict[int, QuadrantDirections] = {}
+    # 1
+    qd1 = QuadrantDirections(
+        north_to=(2, Direction.SOUTH, lambda row, col, size: (0, size - col - 1)),
+        west_to=(3, Direction.SOUTH, lambda row, col, size: (0, row)),
+        east_to=(6, Direction.WEST, lambda row, col, size: (size - row - 1, size - 1)),
+        south_to=(4, Direction.SOUTH, lambda row, col, size: (0, col)),
+        row=0,
+        col=8,
+    )
+    # 2
+    qd2 = QuadrantDirections(
+        north_to=(1, Direction.SOUTH, lambda row, col, size: (0, size - col - 1)),
+        south_to=(5, Direction.NORTH, lambda row, col, size: (size - 1, size - col - 1)),
+        east_to=(3, Direction.EAST, lambda row, col, size: (row, 0)),
+        west_to=(6, Direction.NORTH, lambda row, col, size: (0, size - row - 1)),
+        row=4,
+        col=0,
+    )
+    # 3
+    qd3 = QuadrantDirections(
+        north_to=(1, Direction.EAST, lambda row, col, size: (col, 0)),
+        south_to=(5, Direction.EAST, lambda row, col, size: (size - row - 1, 0)),
+        east_to=(4, Direction.EAST, lambda row, col, size: (row, 0)),
+        west_to=(2, Direction.WEST, lambda row, col, size: (row, size - 1)),
+        row=4,
+        col=4,
+    )
+    # 4
+    qd4 = QuadrantDirections(
+        north_to=(1, Direction.NORTH, lambda row, col, size: (size - 1, col)),
+        south_to=(5, Direction.SOUTH, lambda row, col, size: (0, col)),
+        east_to=(6, Direction.SOUTH, lambda row, col, size: (0, size - row - 1)),
+        west_to=(3, Direction.WEST, lambda row, col, size: (row, size - 1)),
+        row=4,
+        col=8,
+    )
+    # 5
+    qd5 = QuadrantDirections(
+        north_to=(4, Direction.NORTH, lambda row, col, size: (size - 1, col)),
+        south_to=(2, Direction.NORTH, lambda row, col, size: (size - 1, size - col - 1)),
+        east_to=(6, Direction.EAST, lambda row, col, size: (row, 0)),
+        west_to=(3, Direction.NORTH, lambda row, col, size: (0, size - row - 1)),
+        row=8,
+        col=8,
+    )
+    # 6
+    qd6 = QuadrantDirections(
+        north_to=(4, Direction.WEST, lambda row, col, size: (size - col - 1, size - 1)),
+        south_to=(2, Direction.EAST, lambda row, col, size: (size - col - 1, 0)),
+        east_to=(1, Direction.WEST, lambda row, col, size: (size - row - 1, size - 1)),
+        west_to=(5, Direction.WEST, lambda row, col, size: (row, size - 1)),
+        row=8,
+        col=12,
+    )
+
+    sample_dir_map[1] = qd1
+    sample_dir_map[2] = qd2
+    sample_dir_map[3] = qd3
+    sample_dir_map[4] = qd4
+    sample_dir_map[5] = qd5
+    sample_dir_map[6] = qd6
+    return sample_dir_map
+
+
+def make_input_dir_map():
+    input_dir_map: dict[int, QuadrantDirections] = {}
+    # 1
+    qd1a = QuadrantDirections(
+        north_to=(2, Direction.NORTH, lambda row, col, size: (size - 1, col)),
+        west_to=(3, Direction.SOUTH, lambda row, col, size: (0, row)),
+        east_to=(6, Direction.NORTH, lambda row, col, size: (size - 1, row)),
+        south_to=(4, Direction.SOUTH, lambda row, col, size: (0, col)),
+        row=50,
+        col=50,
+    )
+    # 2
+    qd2a = QuadrantDirections(
+        north_to=(5, Direction.EAST, lambda row, col, size: (col, 0)),
+        south_to=(1, Direction.SOUTH, lambda row, col, size: (0, col)),
+        east_to=(6, Direction.EAST, lambda row, col, size: (row, 0)),
+        west_to=(3, Direction.EAST, lambda row, col, size: (size - row - 1, 0)),
+        row=0,
+        col=50,
+    )
+    # 3
+    qd3a = QuadrantDirections(
+        north_to=(1, Direction.EAST, lambda row, col, size: (col, 0)),
+        south_to=(5, Direction.SOUTH, lambda row, col, size: (0, col)),
+        east_to=(4, Direction.EAST, lambda row, col, size: (row, 0)),
+        west_to=(2, Direction.EAST, lambda row, col, size: (size - row - 1, 0)),
+        row=100,
+        col=0,
+    )
+    # 4
+    qd4a = QuadrantDirections(
+        north_to=(1, Direction.NORTH, lambda row, col, size: (size - 1, col)),
+        south_to=(5, Direction.WEST, lambda row, col, size: (col, size - 1)),
+        east_to=(6, Direction.WEST, lambda row, col, size: (size - row - 1, size - 1)),
+        west_to=(3, Direction.WEST, lambda row, col, size: (row, size - 1)),
+        row=100,
+        col=50,
+    )
+    # 5
+    qd5a = QuadrantDirections(
+        north_to=(3, Direction.NORTH, lambda row, col, size: (size - 1, col)),
+        south_to=(6, Direction.SOUTH, lambda row, col, size: (0, col)),
+        east_to=(4, Direction.NORTH, lambda row, col, size: (size - 1, row)),
+        west_to=(2, Direction.SOUTH, lambda row, col, size: (0, row)),
+        row=150,
+        col=0,
+    )
+    # 6
+    qd6a = QuadrantDirections(
+        north_to=(5, Direction.NORTH, lambda row, col, size: (size - 1, col)),
+        south_to=(1, Direction.WEST, lambda row, col, size: (col, size - 1)),
+        east_to=(4, Direction.WEST, lambda row, col, size: (size - row - 1, size - 1)),
+        west_to=(2, Direction.WEST, lambda row, col, size: (row, size - 1)),
+        row=0,
+        col=100,
+    )
+
+    input_dir_map[1] = qd1a
+    input_dir_map[2] = qd2a
+    input_dir_map[3] = qd3a
+    input_dir_map[4] = qd4a
+    input_dir_map[5] = qd5a
+    input_dir_map[6] = qd6a
+    return input_dir_map
+
+
+def test_input_quadrants():
+    with open("input.txt", encoding="utf8") as file_in:
+        input_text = file_in.read()
+    input_dir_map = make_input_dir_map()
+    grid, _ = read_cube(input_text, input_dir_map, quadrant=2, size=50)
+    assert grid.direction == Direction.NORTH
+    assert grid.quadrant == 2
+    assert grid.row == 0
+    assert grid.col == 0
+    grid.walk("R", 50)
+    assert grid.row == 0
+    assert grid.col == 7
+    grid.row = 1
+    grid.col = 0
+    grid.direction = Direction.SOUTH
+    grid.walk("R", 3)
+    print(grid.row, grid.col, grid.quadrant)
+    # assert grid.
+
 
 def test_turn():
     grid, _ = read_grid(SAMPLE_INPUT)
@@ -262,9 +374,6 @@ class Grid:
                     self.col_grid[col] = {}
                 self.col_grid[col][row] = val
 
-        self.col_min = {}
-        self.col_max = {}
-        self.col_bounds = {}
         self.col = min(self.row_grid[0].keys())
 
     def _get_col_min(self):
@@ -298,6 +407,9 @@ class Grid:
     def get_row(self):
         return self.row
 
+    def get_grid_value(self):
+        return self.row_grid[self.row][self.col]
+
     def step_col(self, backwards=False):
         direction = self.direction
         if backwards:
@@ -319,17 +431,13 @@ class Grid:
 
     def walk(self, letter: str, steps: int):
         self.turn(letter)
-        print(self.direction, letter, steps, self.row, self.col)
-        # if self.row == 5 and self.col == 6:
-        #     import pdb
-
-        #     pdb.set_trace()
+        # print(self.direction, letter, steps, self.row, self.col)  # , self.quadrant)
         while steps > 0:
             if self.direction in [Direction.EAST, Direction.WEST]:
                 self.step_col()
             else:
                 self.step_row()
-            if self.row_grid[self.row][self.col] == "#":
+            if self.get_grid_value() == "#":
                 if self.direction in [Direction.EAST, Direction.WEST]:
                     self.step_col(backwards=True)
                 else:
@@ -338,162 +446,50 @@ class Grid:
             steps -= 1
 
 class Cube(Grid):
-    def __init__(self, grid, size):
+    def __init__(self, grid, size, dir_map, quadrant):
         super().__init__(grid)
-        self.quadrant = 1
+        self.quadrant = quadrant
         self.size = size
+        self.row = 0
+        self.col = 0
+        self.dir_map = dir_map
+
+    def get_grid_value(self):
+        quad = self.dir_map[self.quadrant]
+        return self.row_grid[quad.row + self.row][quad.col + self.col]
 
     def move_quadrant(self, direction: Direction, backwards=False):
-        q_dirs = DIR_MAP[self.quadrant]
+        q_dirs = self.dir_map[self.quadrant]
         if direction == Direction.EAST:
-            new_quadrant, new_direction = q_dirs.east_to
+            new_quadrant, new_direction, row_col_fn = q_dirs.east_to
         elif direction == Direction.WEST:
-            new_quadrant, new_direction = q_dirs.west_to
+            new_quadrant, new_direction, row_col_fn = q_dirs.west_to
         elif direction == Direction.NORTH:
-            new_quadrant, new_direction = q_dirs.north_to
+            new_quadrant, new_direction, row_col_fn = q_dirs.north_to
         else:
-            new_quadrant, new_direction = q_dirs.south_to
+            new_quadrant, new_direction, row_col_fn = q_dirs.south_to
 
         if not backwards:
             self.direction = new_direction
         else:
             self.direction = Direction((new_direction.value + 2) % 4)
 
-        if self.quadrant == 1:
-            if new_quadrant == 2:
-                self.row = self.size
-                self.col = self.col - 2 * self.size
-            if new_quadrant == 3:
-                self.col = self.size + self.row
-                self.row = self.size
-            if new_quadrant == 4:
-                self.row = self.size
-                # self.col stays the same
-            if new_quadrant == 6:
-                self.row = 3 * self.size - self.row - 1
-                self.col = 4 * self.size - 1
-        elif self.quadrant == 2:
-            if new_quadrant == 1:
-                self.row = 0
-                self.col = 3 * self.size - self.col - 1
-            if new_quadrant == 3:
-                self.col = self.size
-                # self.row stays the same
-            if new_quadrant == 5:
-                self.row = 3 * self.size - 1
-                self.col = 3 * self.size - self.col - 1
-            if new_quadrant == 6:
-                self.col = 3 * self.size - self.row - 1
-                self.row = 3 * self.size
-        elif self.quadrant == 3:
-            if new_quadrant == 2:
-                # self.row stays the same
-                self.col = self.size - 1
-            if new_quadrant == 4:
-                # self.row stays the same
-                self.col = 2 * self.size
-            if new_quadrant == 1:
-                self.row = self.col - self.size
-                self.col = 2 * self.size
-            if new_quadrant == 5:
-                self.row = 3 * self.size - self.row - 1
-                self.col = 2 * self.size
-        elif self.quadrant == 4:
-            if new_quadrant == 1:
-                self.row = self.size - 1
-                # self.col stays the same
-            if new_quadrant == 3:
-                self.col = 2 * self.size - 1
-                # self.row stays the same
-            if new_quadrant == 5:
-                self.row = 2 * self.size
-                # self.col stays the same
-            if new_quadrant == 6:
-                self.col = 5 * self.size - self.row - 1
-                self.row = 2 * self.size
-        elif self.quadrant == 5:
-            if new_quadrant == 4:
-                self.row = 2 * self.size - 1
-                # self.col stays the same
-            if new_quadrant == 6:
-                self.col = 3 * self.size
-                # self.row stays the same
-            if new_quadrant == 3:
-                self.col = 4 * self.size - self.row - 1
-                self.row = 2 * self.size
-            if new_quadrant == 2:
-                self.row = 2 * self.size - 1
-                self.col = 3 * self.size - self.col - 1
-        else:  # if self.quadrant == 6:
-            if new_quadrant == 5:
-                # self.row stays the same
-                self.col = 3 * self.size - 1
-            if new_quadrant == 4:
-                self.row = 4 * self.size - self.col - 1
-                self.col = 3 * self.size - 1
-            if new_quadrant == 1:
-                self.row = 3 * self.size - self.row - 1
-                self.col = 3 * self.size - 1
-            if new_quadrant == 2:
-                self.row = 3 * self.size - self.col - 1
-                self.col = 0
+        new_row, new_col = row_col_fn(self.row, self.col, self.size)
         self.quadrant = new_quadrant
+        self.row = new_row
+        self.col = new_col
 
     def _get_col_min(self):
-        if self.quadrant == 1:
-            return 2 * self.size
-        if self.quadrant == 2:
-            return 0
-        if self.quadrant == 3:
-            return self.size
-        if self.quadrant == 4:
-            return 2 * self.size
-        if self.quadrant == 5:
-            return 2 * self.size
-        # if self.quadrant == 6:
-        return 3 * self.size
+        return 0
 
     def _get_col_max(self):
-        if self.quadrant == 1:
-            return 3 * self.size - 1
-        if self.quadrant == 2:
-            return self.size - 1
-        if self.quadrant == 3:
-            return 2 * self.size - 1
-        if self.quadrant == 4:
-            return 3 * self.size - 1
-        if self.quadrant == 5:
-            return 3 * self.size - 1
-        # if self.quadrant == 6:
-        return 4 * self.size - 1
+        return self.size - 1
 
     def _get_row_min(self):
-        if self.quadrant == 1:
-            return 0
-        if self.quadrant == 2:
-            return self.size
-        if self.quadrant == 3:
-            return self.size
-        if self.quadrant == 4:
-            return self.size
-        if self.quadrant == 5:
-            return 2 * self.size
-        # if self.quadrant == 6:
-        return 2 * self.size
+        return 0
 
     def _get_row_max(self):
-        if self.quadrant == 1:
-            return self.size - 1
-        if self.quadrant == 2:
-            return 2 * self.size - 1
-        if self.quadrant == 3:
-            return 2 * self.size - 1
-        if self.quadrant == 4:
-            return 2 * self.size - 1
-        if self.quadrant == 5:
-            return 3 * self.size - 1
-        # if self.quadrant == 6:
-        return 3 * self.size - 1
+        return self.size - 1
 
     def step_col(self, backwards=False):
         col_min = self._get_col_min()
@@ -523,12 +519,12 @@ class Cube(Grid):
 
         if direction == Direction.NORTH:
             if self.row == row_min:
-                self.move_quadrant(Direction.NORTH)
+                self.move_quadrant(Direction.NORTH, backwards=backwards)
             else:
                 self.row -= 1
         elif direction == Direction.SOUTH:
             if self.row == row_max:
-                self.move_quadrant(Direction.SOUTH)
+                self.move_quadrant(Direction.SOUTH, backwards=backwards)
             else:
                 self.row += 1
 
@@ -536,7 +532,7 @@ class Cube(Grid):
 def walk_grid(grid: Grid, path):
     while path:
         turn_letter, steps, path = next_direction(path)
-        print(turn_letter, steps, path)
+        # print(turn_letter, steps)  # , path)
         grid.walk(turn_letter, steps)
 
 
@@ -548,10 +544,14 @@ def test_walk_grid_part1():
 
 
 def test_walk_grid_part2():
-    cube, path = read_cube(SAMPLE_INPUT)
+    sample_dir_map = make_sample_dir_map()
+    cube, path = read_cube(SAMPLE_INPUT, sample_dir_map)
     walk_grid(cube, path)
-    print("Last facing:", cube.direction)
-    score = 1000 * (cube.row + 1) + 4 * (cube.col + 1) + cube.direction.value
+    score = (
+        1000 * (cube.row + sample_dir_map[cube.quadrant].row + 1)
+        + 4 * (cube.col + sample_dir_map[cube.quadrant].col + 1)
+        + cube.direction.value
+    )
     assert score == 5031
 
 
@@ -575,12 +575,12 @@ def read_grid(input_str: str) -> tuple[Grid, str]:
     return grid, path
 
 
-def read_cube(input_str: str, size=4) -> tuple[Cube, str]:
+def read_cube(input_str: str, dir_map, quadrant=1, size=4) -> tuple[Cube, str]:
     input_lines = parse_input(input_str)
     lines = input_lines[0 : len(input_lines) - 1]
     path = "R" + input_lines[-1]
     grid_rows = read_grid_lines(lines)
-    grid = Cube(grid_rows, size)
+    grid = Cube(grid_rows, size, dir_map, quadrant)
     return grid, path
 
 
@@ -625,15 +625,20 @@ def parse_input(text: str) -> list[str]:
 def main():
     with open("input.txt", encoding="utf8") as file_in:
         input_text = file_in.read()
-    # grid, path = read_grid(input_text)
-    # walk_grid(grid, path)
-    # score = 1000 * (grid.row + 1) + 4 * (grid.col + 1) + grid.direction.value
-    # print("Part 1:", score)
+    grid, path = read_grid(input_text)
+    walk_grid(grid, path)
+    score = 1000 * (grid.row + 1) + 4 * (grid.col + 1) + grid.direction.value
+    print("Part 1:", score)
 
     # part 2
-    cube, path = read_cube(input_text)
+    input_dir_map = make_input_dir_map()
+    cube, path = read_cube(input_text, input_dir_map, size=50, quadrant=2)
     walk_grid(cube, path)
-    score = 1000 * (cube.row + 1) + 4 * (cube.col + 1) + cube.direction.value
+    score = (
+        1000 * (input_dir_map[cube.quadrant].row + cube.row + 1)
+        + 4 * (input_dir_map[cube.quadrant].col + cube.col + 1)
+        + cube.direction.value
+    )
     print("Part 2:", score)
 
 
