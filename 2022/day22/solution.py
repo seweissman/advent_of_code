@@ -237,7 +237,7 @@ def make_sample_dir_map():
 def make_input_dir_map():
     input_dir_map: dict[int, QuadrantDirections] = {}
     # 1
-    qd1a = QuadrantDirections(
+    qd1 = QuadrantDirections(
         north_to=(2, Direction.NORTH, lambda row, col, size: (size - 1, col)),
         west_to=(3, Direction.SOUTH, lambda row, col, size: (0, row)),
         east_to=(6, Direction.NORTH, lambda row, col, size: (size - 1, row)),
@@ -246,7 +246,7 @@ def make_input_dir_map():
         col=50,
     )
     # 2
-    qd2a = QuadrantDirections(
+    qd2 = QuadrantDirections(
         north_to=(5, Direction.EAST, lambda row, col, size: (col, 0)),
         south_to=(1, Direction.SOUTH, lambda row, col, size: (0, col)),
         east_to=(6, Direction.EAST, lambda row, col, size: (row, 0)),
@@ -255,7 +255,7 @@ def make_input_dir_map():
         col=50,
     )
     # 3
-    qd3a = QuadrantDirections(
+    qd3 = QuadrantDirections(
         north_to=(1, Direction.EAST, lambda row, col, size: (col, 0)),
         south_to=(5, Direction.SOUTH, lambda row, col, size: (0, col)),
         east_to=(4, Direction.EAST, lambda row, col, size: (row, 0)),
@@ -264,7 +264,7 @@ def make_input_dir_map():
         col=0,
     )
     # 4
-    qd4a = QuadrantDirections(
+    qd4 = QuadrantDirections(
         north_to=(1, Direction.NORTH, lambda row, col, size: (size - 1, col)),
         south_to=(5, Direction.WEST, lambda row, col, size: (col, size - 1)),
         east_to=(6, Direction.WEST, lambda row, col, size: (size - row - 1, size - 1)),
@@ -273,7 +273,7 @@ def make_input_dir_map():
         col=50,
     )
     # 5
-    qd5a = QuadrantDirections(
+    qd5 = QuadrantDirections(
         north_to=(3, Direction.NORTH, lambda row, col, size: (size - 1, col)),
         south_to=(6, Direction.SOUTH, lambda row, col, size: (0, col)),
         east_to=(4, Direction.NORTH, lambda row, col, size: (size - 1, row)),
@@ -282,7 +282,7 @@ def make_input_dir_map():
         col=0,
     )
     # 6
-    qd6a = QuadrantDirections(
+    qd6 = QuadrantDirections(
         north_to=(5, Direction.NORTH, lambda row, col, size: (size - 1, col)),
         south_to=(1, Direction.WEST, lambda row, col, size: (col, size - 1)),
         east_to=(4, Direction.WEST, lambda row, col, size: (size - row - 1, size - 1)),
@@ -291,12 +291,12 @@ def make_input_dir_map():
         col=100,
     )
 
-    input_dir_map[1] = qd1a
-    input_dir_map[2] = qd2a
-    input_dir_map[3] = qd3a
-    input_dir_map[4] = qd4a
-    input_dir_map[5] = qd5a
-    input_dir_map[6] = qd6a
+    input_dir_map[1] = qd1
+    input_dir_map[2] = qd2
+    input_dir_map[3] = qd3
+    input_dir_map[4] = qd4
+    input_dir_map[5] = qd5
+    input_dir_map[6] = qd6
     return input_dir_map
 
 
