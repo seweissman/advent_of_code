@@ -312,14 +312,17 @@ def propose_moves(grid: Grid, start_dir: Direction) -> list[tuple[tuple[int, int
     return proposed_moves
 
 
-def make_moves(proposed_moves) -> Grid:
+def make_moves(proposed_moves) -> tuple[Grid, bool]:
     new_grid = {}
     move_cts = defaultdict(int)
+    changed = False
     for _, move_loc in proposed_moves:
         move_cts[move_loc] += 1
     for curr_loc, move_loc in proposed_moves:
         ct = move_cts[move_loc]
         if ct == 1:
+            if curr_loc != move_loc:
+                changed = True
             row, col = move_loc
         else:
             row, col = curr_loc
@@ -327,22 +330,22 @@ def make_moves(proposed_moves) -> Grid:
             new_grid[row] = {}
         new_grid[row][col] = "#"
 
-    return new_grid
+    return new_grid, changed
 
 
-def run_round(grid: Grid, d: Direction) -> Grid:
+def run_round(grid: Grid, d: Direction) -> tuple[Grid, bool]:
     # print("Start direction: ", d)
     proposed_moves = propose_moves(grid, d)
-    if not proposed_moves:
-        return grid
-    new_grid = make_moves(proposed_moves)
-    return new_grid
+    new_grid, changed = make_moves(proposed_moves)
+    return new_grid, changed
 
 
 def run_rounds(grid: Grid, num_rounds: int) -> Grid:
     d = Direction.NORTH
     for _ in range(num_rounds):
-        grid = run_round(grid, d)
+        grid, changed = run_round(grid, d)
+        if not changed:
+            break
         d = Direction((d.value + 1) % 4)
         # print()
         # print_grid(grid)
@@ -350,19 +353,36 @@ def run_rounds(grid: Grid, num_rounds: int) -> Grid:
     return grid
 
 
+def count_rounds(grid: Grid) -> int:
+    d = Direction.NORTH
+    ct = 0
+    while True:
+        ct += 1
+        grid, changed = run_round(grid, d)
+        if not changed:
+            break
+        d = Direction((d.value + 1) % 4)
+        # print()
+        # print_grid(grid)
+        # print()
+    return ct
+
+
 def test_sample_large():
     input_lines = parse_input(SAMPLE_INPUT)
     grid = read_grid_lines(input_lines)
-    grid = run_rounds(grid, 10)
-    assert count_blank(grid) == 110
+    new_grid = run_rounds(grid, 10)
+    assert count_blank(new_grid) == 110
+    ct = count_rounds(grid)
+    assert ct == 20
 
 
 def test_sample_small():
     input_lines = parse_input(SAMPLE_INPUT_SMALL)
     grid = read_grid_lines(input_lines)
-    # print(grid)
-    grid = run_rounds(grid, 10)
-    assert count_blank(grid) == 110
+    # run_rounds(grid, 10)
+    ct = count_rounds(grid)
+    assert ct == 4
 
 
 def read_grid_lines(lines: list[str]) -> dict[int, dict[int, str]]:
@@ -407,8 +427,9 @@ def main():
         input_text = file_in.read()
     input_lines = parse_input(input_text)
     grid = read_grid_lines(input_lines)
-    grid = run_rounds(grid, 10)
-    print("Part 1:", count_blank(grid))
+    new_grid = run_rounds(grid, 10)
+    print("Part 1:", count_blank(new_grid))
+    print("part 2: ", count_rounds(grid))
 
 
 if __name__ == "__main__":
