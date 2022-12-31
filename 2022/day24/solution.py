@@ -232,7 +232,6 @@ Minute 18, move down:
 What is the fewest number of minutes required to avoid the blizzards and reach the goal?
 """
 
-import heapq
 from collections import defaultdict
 from enum import Enum
 
@@ -265,60 +264,149 @@ class Blizzard:
         return self.row, self.col, self.direction, self.limit
 
 
-def search_path(blizzards: list[Blizzard], end: tuple[int, int], row_limit: int, col_limit, repeat_time=12):
-    h = []
+def search_path(
+    blizzards: list[Blizzard],
+    end: tuple[int, int],
+    row_limit: int,
+    col_limit,
+    repeat_time=12,
+):
     minute = 0
-    start = (-1, 0)
-    # END:  (20, 149) 20 150
-    max_time = 0
+    start_row = -1
+    start_col = 0
+    start = (start_row, start_col)
     min_dist = 100000
-    print("END: ", end, row_limit, col_limit)
+    # print("END: ", end, row_limit, col_limit)
     end_row, end_col = end
-    blizzard_states = [blizzard.get_state() for blizzard in blizzards]
-    dist = end_row + 1 + end_col
-    # score = (dist, minute)
-    score = minute
-    # score = dist
     seen = set()
-    heapq.heappush(h, (score, minute, start, blizzard_states, [start]))
-    while True:
-        score, minute, position, blizzard_states, path = heapq.heappop(h)
-        # if minute > max_time:
-        #     max_time = minute
-        #     print(minute, score)
-        row, col = position
+    min_time_to_point = dict()
 
-        dist = end_row - row + end_col - col
-        if dist < min_dist:
-            min_dist = dist
-            print(min_dist, len(h))
-        # print(score, minute, position)  # , blizzard_states)
-        if position == end:
-            print(path)
-            return minute, path
-        if (minute % repeat_time, position) in seen:
-            continue
-        seen.add((minute % repeat_time, position))
-        blizzards = [Blizzard(*state) for state in blizzard_states]
+    curr_states = [(minute, start, {(0, start)})]
+    while True:
+        new_states = []
         for blizzard in blizzards:
             blizzard.move()
+
         blizzard_locs = set()
         for blizzard in blizzards:
             blizzard_locs.add((blizzard.row, blizzard.col))
-        blizzard_states = [blizzard.get_state() for blizzard in blizzards]
-        possible_moves = [(row, col), (row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]
-        for move in possible_moves:
-            move_row, move_col = move
-            if (0 <= move_row < row_limit and 0 <= move_col < col_limit) or move == end:
-                if move not in blizzard_locs:
-                    # print("Possible move: ", move)
-                    dist = end_row - move_row + end_col - move_col
-                    # score = (dist, minute + 1)
-                    score = minute + 1
-                    new_path = path.copy()
-                    new_path.append(move)
-                    # score = dist
-                    heapq.heappush(h, (score, minute + 1, move, blizzard_states, new_path))
+
+        for state in curr_states:
+            minute, position, seen_points = state
+            row, col = position
+
+            if position not in min_time_to_point:
+                min_time_to_point[position] = minute
+
+            # dist = end_row - row + end_col - col
+            # if dist < min_dist:
+            #     min_dist = dist
+            #     print(min_dist, minute, len(curr_states))
+            if position == end:
+                return minute, seen_points
+            if (minute % repeat_time, position) in seen:
+                continue
+            seen.add((minute % repeat_time, position))
+            possible_moves = [(row, col), (row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]
+            for move in possible_moves:
+                move_row, move_col = move
+                if (0 <= move_row < row_limit and 0 <= move_col < col_limit) or move == end:
+                    if move not in blizzard_locs:
+
+                        if (
+                            move in min_time_to_point
+                            and move not in seen_points
+                            and minute + 1 > min_time_to_point[move] + 10
+                        ):
+                            continue
+
+                        new_seen_points = seen_points.copy()
+                        new_seen_points.add(move)
+                        new_states.append((minute + 1, move, new_seen_points))
+        curr_states = new_states
+
+
+def search_path_part2(
+    blizzards: list[Blizzard],
+    end: tuple[int, int],
+    row_limit: int,
+    col_limit,
+    repeat_time=12,
+):
+    minute = 0
+    start_row = -1
+    start_col = 0
+    start = (start_row, start_col)
+    # min_dist = 100000
+    # print("END: ", end, row_limit, col_limit)
+    end_row, end_col = end
+    seen = set()
+    leg = 0
+    min_time_to_point = dict()
+
+    curr_states = [(minute, leg, start, {(0, start)})]
+    while True:
+        new_states = []
+        for blizzard in blizzards:
+            blizzard.move()
+
+        blizzard_locs = set()
+        for blizzard in blizzards:
+            blizzard_locs.add((blizzard.row, blizzard.col))
+
+        for state in curr_states:
+            minute, leg, position, seen_points = state
+            if leg > 2:
+                continue
+            row, col = position
+
+            if position not in min_time_to_point:
+                min_time_to_point[(leg, position)] = minute
+
+            # if leg in [0, 2]:
+            #     dist = end_row - row + end_col - col
+            # else:
+            #     dist = row - start[0] + col - start[1]
+            # dist += (2 - leg) * (row_limit + col_limit)
+            # if dist < min_dist:
+            #     min_dist = dist
+            #     print(min_dist, minute, len(curr_states))
+            if position == end and leg == 2:
+                return minute, seen_points
+            if (minute % repeat_time, leg, position) in seen:
+                continue
+            seen.add((minute % repeat_time, leg, position))
+            if position == start:
+                possible_moves = [start, (0, 0)]
+            elif position == end:
+                possible_moves = [end, (row_limit - 1, col_limit - 1)]
+            else:
+                possible_moves = [(row, col), (row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]
+            for move in possible_moves:
+                move_row, move_col = move
+                if (
+                    (0 <= move_row < row_limit and 0 <= move_col < col_limit)
+                    or (leg == 1 and move == start)
+                    or (leg in [0, 2] and move == end)
+                ):
+                    if move not in blizzard_locs:
+                        new_leg = leg
+                        if new_leg in [0, 2] and position == end:
+                            new_leg += 1
+                        elif new_leg == 1 and position == start:
+                            new_leg += 1
+
+                        if (
+                            (new_leg, move) in min_time_to_point
+                            and (new_leg, move) not in seen_points
+                            and minute + 1 > min_time_to_point[(new_leg, move)] + 10
+                        ):
+                            continue
+
+                        new_seen_points = seen_points.copy()
+                        new_seen_points.add((new_leg, move))
+                        new_states.append((minute + 1, new_leg, move, new_seen_points))
+        curr_states = new_states
 
 
 def make_blizzards(lines) -> list[Blizzard]:
@@ -390,23 +478,6 @@ def test_print_grid():
     print_grid(blizzards, row_limit, col_limit, (-1, 0))
 
 
-def time_to_seen_state(blizzards: list[Blizzard]) -> int:
-    ct = 0
-    blizzard_sets = []
-    while True:
-        blizzard_set = set()
-        for blizzard in blizzards:
-            blizzard_set.add(blizzard.get_state())
-        for other_set in blizzard_sets:
-            if blizzard_set == other_set:
-                return ct
-        blizzard_sets.append(blizzard_set)
-        for blizzard in blizzards:
-            blizzard.move()
-        ct += 1
-    return ct
-
-
 SAMPLE_INPUT_SIMPLE = """#.#####
 #.....#
 #>....#
@@ -418,7 +489,6 @@ SAMPLE_INPUT_SIMPLE = """#.#####
 
 def test_make_blizzards():
     input_lines = parse_input(SAMPLE_INPUT_SIMPLE)
-    print(input_lines[1:-1])
     blizzards = make_blizzards(input_lines[1:-1])
     assert len(blizzards) == 2
     blizzard1 = blizzards[0]
@@ -465,14 +535,17 @@ def test_part1_complex():
     minute, path = search_path(blizzards, end, row_limit, col_limit)
     assert minute == 18
 
-    blizzards = make_blizzards(input_lines[1:-1])
-    for exp_loc in path:
-        print_grid(blizzards, row_limit, col_limit, exp_loc)
-        for blizzard in blizzards:
-            blizzard.move()
 
-    print("Time to seen:")
-    print("Time to seen:", time_to_seen_state(blizzards))
+def test_part2_complex():
+    input_lines = parse_input(SAMPLE_INPUT_COMPLEX)
+    # print(input_lines[1:-1])
+    blizzards = make_blizzards(input_lines[1:-1])
+    row_limit = len(input_lines) - 2
+    col_limit = len(input_lines[0]) - 2
+    end = (len(input_lines) - 2, len(input_lines[0]) - 3)
+
+    minute, path = search_path_part2(blizzards, end, row_limit, col_limit)
+    assert minute == 54
 
 
 def parse_input(text: str) -> list[str]:
@@ -490,16 +563,13 @@ def main():
     row_limit = len(input_lines) - 2
     col_limit = len(input_lines[0]) - 2
     end = (len(input_lines) - 2, len(input_lines[0]) - 3)
-    print("Time to repeat:", time_to_seen_state(blizzards))
-    minute, path = search_path(blizzards, end, row_limit, col_limit, repeat_time=300)
-    # blizzards = make_blizzards(input_lines[1:-1])
-    # for ct, exp_loc in enumerate(path):
-    #     print(ct, path)
-    #     print_grid(blizzards, row_limit, col_limit, exp_loc)
-    #     for blizzard in blizzards:
-    #         blizzard.move()
 
+    minute, path = search_path(blizzards, end, row_limit, col_limit, repeat_time=300)
     print("Part 1:", minute)
+
+    blizzards = make_blizzards(input_lines[1:-1])
+    minute, path = search_path_part2(blizzards, end, row_limit, col_limit, repeat_time=300)
+    print("Part 2:", minute)
 
 
 if __name__ == "__main__":
