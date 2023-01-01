@@ -108,46 +108,63 @@ SAMPLE_INPUT = """1=-0-2
 1=
 122"""
 
+
 # the digits are 2, 1, 0, minus (written -), and double-minus (written =).
 # Minus is worth -1, and double-minus is worth -2."
 
 
+def int_to_snafu_digit(val: int):
+    """Convert the value to a snafu digit and return any carry_over"""
+    # We are working in base 5
+    carry_over = val // 5
+    remainder = val % 5
+    # If the snafu digit is greater than 2 it is expressed as the next highest number minus 1 ("-") or 2 ("=")
+    # 3 --> 1-
+    # 4 --> 1=
+    # We can handle this by adding one to the carry_over
+    if remainder == 3:
+        snafu_char = "="
+        carry_over += 1
+    elif remainder == 4:
+        snafu_char = "-"
+        carry_over += 1
+    else:
+        snafu_char = str(remainder)
+    return (snafu_char, carry_over)
+
+
+def snafu_digit_to_int(c: str) -> int:
+    if c == "-":
+        return -1
+    elif c == "=":
+        return -2
+    return int(c)
+
 def add_snafu(snafu_nums: list[str]) -> str:
-    sum = []
-    max_length = 0
-    for num in snafu_nums:
-        if len(num) > max_length:
-            max_length = len(num)
+    snafu_sum = []
+    max_length = max([len(num) for num in snafu_nums])
+    # Calculate the sum using basic addition from smallest to largest place
     carry_over = 0
     for i in range(0, max_length):
         place_sum = carry_over
         for num in snafu_nums:
             val = 0
+            # Get the snafu number in the ith place
             if i < len(num):
                 c = num[-(i + 1)]
-                if c == "2":
-                    val = 2
-                elif c == "1":
-                    val = 1
-                elif c == "0":
-                    val = 0
-                elif c == "-":
-                    val = -1
-                elif c == "=":
-                    val = -2
+                val = snafu_digit_to_int(c)
             place_sum += val
-        carry_over = place_sum // 5
-        remainder = place_sum % 5
-        if remainder == 3:
-            place_char = "="
-            carry_over += 1
-        elif remainder == 4:
-            place_char = "-"
-            carry_over += 1
-        else:
-            place_char = str(remainder)
-        sum.append(place_char)
-    return "".join(list(reversed(sum)))
+        place_char, carry_over = int_to_snafu_digit(place_sum)
+        snafu_sum.append(place_char)
+    # Handle any additional carry over
+    while carry_over > 0:
+        place_sum = carry_over
+        place_char, carry_over = int_to_snafu_digit(place_sum)
+        snafu_sum.append(place_char)
+
+    # we have to reverse the digits in the sum since we've worked from smallest to largest place
+    # and join them back to a string
+    return "".join(list(reversed(snafu_sum)))
 
 
 def test_sample():
@@ -155,6 +172,13 @@ def test_sample():
     answer = add_snafu(snafu_nums)
     assert answer == "2=-1=0"
 
+
+def test_carry_over():
+    """Test case where carry over requires additional places"""
+    snafu_nums = ["2"] * 20
+    answer = add_snafu(snafu_nums)
+    # Snafu number only contains valid characters
+    assert set(list(answer)) - set(list("210-=")) == set()
 
 def parse_input(text: str) -> list[str]:
     """Parse lines of input from raw text"""
